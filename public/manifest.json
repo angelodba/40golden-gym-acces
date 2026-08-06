@@ -1,0 +1,23 @@
+{
+  "short_name": "FitPass Gym",
+  "name": "FitPass Gym - Control de Acceso QR",
+  "icons": [
+    {
+      "src": "/pwa-192x192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/pwa-512x512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#0f172a",
+  "theme_color": "#10b981",
+  "display": "standalone",
+  "orientation": "portrait",
+  "description": "Sistema de Pase con Código QR y Control de Acceso para Gimnasios"
+}
