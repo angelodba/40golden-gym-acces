@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Member } from '../types';
 import { generateSecureQrToken } from '../utils/crypto';
 import { exportMembersToExcel } from '../utils/excelUtils';
+import { getMemberAvatarUrl } from '../utils/avatarUtils';
 import { ExcelImportModal } from './ExcelImportModal';
 import { Users, UserPlus, Search, DollarSign, QrCode, AlertTriangle, CheckCircle, ShieldCheck, KeyRound, FileSpreadsheet, Download } from 'lucide-react';
 import { QRCodeCanvas } from 'qrcode.react';
@@ -55,18 +56,21 @@ export const AdminMembers: React.FC<AdminMembersProps> = ({
     // Generar Token QR Cifrado Criptográficamente con AES-GCM (Sin PII legible)
     const token = await generateSecureQrToken(memberId);
 
+    const name = newName.trim();
+    const lastName = newLastName.trim();
+
     const newMember: Member = {
       id: memberId,
       qrToken: token,
-      name: newName.trim(),
-      lastName: newLastName.trim(),
+      name,
+      lastName,
       dni: newDni.trim(),
-      phone: newPhone.trim() || '+54 9 11 0000-0000',
-      email: newEmail.trim() || `${newName.toLowerCase().replace(/\s/g, '')}@email.com`,
+      phone: newPhone.trim() || '+58 414 000-0000',
+      email: newEmail.trim() || `${name.toLowerCase().replace(/\s/g, '')}@email.com`,
       status: debt > 0 ? 'DEBTOR' : 'ACTIVE',
       debtAmount: debt,
       expirationDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      avatarUrl: `https://images.unsplash.com/photo-${1534528741775 + Math.floor(Math.random() * 1000)}?auto=format&fit=crop&q=80&w=200`,
+      avatarUrl: getMemberAvatarUrl(name, lastName),
       planName: newPlan,
     };
 
@@ -81,74 +85,79 @@ export const AdminMembers: React.FC<AdminMembersProps> = ({
   };
 
   return (
-    <div className="max-w-7xl mx-auto p-4 space-y-6">
-      {/* Header & Controls */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col md:flex-row items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-slate-100 flex items-center gap-2">
-            <Users className="w-6 h-6 text-emerald-400" /> Administración de Socios y Cuentas
-          </h2>
-          <p className="text-xs text-slate-400 mt-1">
-            Gestiona los pases QR firmados criptográficamente, información de clientes y saldos pendientes.
-          </p>
+    <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
+      {/* Header & Controls Claro */}
+      <div className="bg-white border-2 border-slate-200 rounded-3xl p-6 shadow-xl flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div className="p-3.5 bg-emerald-600 text-white rounded-2xl border-2 border-emerald-500 shadow-lg shadow-emerald-600/30 shrink-0">
+            <Users className="w-8 h-8 stroke-[2.5]" />
+          </div>
+          <div>
+            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+              Administración de Socios y Cuentas
+            </h2>
+            <p className="text-sm font-bold text-slate-600 mt-1">
+              Registro de clientes, cobro de cuotas morosas e importación masiva.
+            </p>
+          </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto justify-end">
           <button
             onClick={() => exportMembersToExcel(members)}
-            className="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-semibold px-3.5 py-2.5 rounded-xl text-xs flex items-center gap-2 transition-colors w-full sm:w-auto justify-center"
-            title="Exportar base de datos de socios a Excel"
+            className="bg-slate-100 hover:bg-slate-200 text-slate-900 border-2 border-slate-300 font-extrabold px-4 py-2.5 rounded-2xl text-xs sm:text-sm flex items-center gap-2 transition-all shadow-sm"
           >
-            <Download className="w-4 h-4 text-emerald-400" /> Exportar Excel
+            <Download className="w-4 h-4 stroke-[2.5]" /> Exportar Excel
           </button>
 
-          <button
-            onClick={() => setShowExcelModal(true)}
-            className="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-emerald-400 font-bold px-3.5 py-2.5 rounded-xl text-xs flex items-center gap-2 transition-colors w-full sm:w-auto justify-center"
-          >
-            <FileSpreadsheet className="w-4 h-4" /> Cargar Excel / CSV
-          </button>
+          {onAddMembersBatch && (
+            <button
+              onClick={() => setShowExcelModal(true)}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white border-2 border-emerald-500 font-black px-4 py-2.5 rounded-2xl text-xs sm:text-sm flex items-center gap-2 transition-all shadow-md"
+            >
+              <FileSpreadsheet className="w-4 h-4 stroke-[2.5]" /> Importar Excel
+            </button>
+          )}
 
           <button
             onClick={() => setShowAddModal(true)}
-            className="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold px-4 py-2.5 rounded-xl text-xs flex items-center gap-2 transition-colors shadow-lg shadow-emerald-600/20 w-full sm:w-auto justify-center"
+            className="bg-emerald-600 hover:bg-emerald-700 text-white border-2 border-emerald-500 font-black px-5 py-2.5 rounded-2xl text-xs sm:text-sm flex items-center gap-2 transition-all shadow-lg hover:scale-[1.02] active:scale-95"
           >
-            <UserPlus className="w-4 h-4" /> Registrar Nuevo Socio
+            <UserPlus className="w-4 h-4 stroke-[3]" /> Registrar Nuevo Socio
           </button>
         </div>
       </div>
 
-
-      {/* Search & Filter Bar */}
+      {/* Search & Filter Bar Claro */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
         <div className="md:col-span-8 relative">
-          <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
+          <Search className="w-5 h-5 text-slate-500 absolute left-4 top-1/2 -translate-y-1/2 stroke-[2.5]" />
           <input
             type="text"
-            placeholder="Buscar socio por Nombre, Apellido o DNI..."
+            placeholder="Buscar socio por Nombre, Apellido o C.I..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
+            className="w-full bg-white border-2 border-slate-300 focus:border-emerald-600 rounded-2xl pl-12 pr-4 py-3 text-sm font-bold text-slate-900 placeholder-slate-500 focus:outline-none shadow-sm"
           />
         </div>
 
         <div className="md:col-span-4 flex items-center gap-2">
           <button
             onClick={() => setFilterStatus('ALL')}
-            className={`flex-1 py-2 rounded-xl text-xs font-semibold border transition-all ${
+            className={`flex-1 py-2.5 rounded-xl text-xs font-black border-2 transition-all shadow-sm ${
               filterStatus === 'ALL'
-                ? 'bg-slate-800 text-slate-100 border-slate-700'
-                : 'bg-slate-900/60 text-slate-400 border-slate-800 hover:bg-slate-800'
+                ? 'bg-slate-900 text-white border-slate-900'
+                : 'bg-white text-slate-800 border-slate-300 hover:bg-slate-100'
             }`}
           >
             Todos ({members.length})
           </button>
           <button
             onClick={() => setFilterStatus('DEBTOR')}
-            className={`flex-1 py-2 rounded-xl text-xs font-semibold border transition-all ${
+            className={`flex-1 py-2.5 rounded-xl text-xs font-black border-2 transition-all shadow-sm ${
               filterStatus === 'DEBTOR'
-                ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
-                : 'bg-slate-900/60 text-slate-400 border-slate-800 hover:bg-slate-800'
+                ? 'bg-rose-600 text-white border-rose-600'
+                : 'bg-white text-rose-600 border-rose-300 hover:bg-rose-50'
             }`}
           >
             Morosos ({members.filter((m) => m.debtAmount > 0).length})
@@ -156,151 +165,169 @@ export const AdminMembers: React.FC<AdminMembersProps> = ({
         </div>
       </div>
 
-      {/* Members Table */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+      {/* Tabla de Socios Claro */}
+      <div className="bg-white border-2 border-slate-200 rounded-3xl overflow-hidden shadow-xl">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-slate-800 text-[11px] font-bold text-slate-400 uppercase tracking-wider bg-slate-950/60">
-                <th className="py-3.5 px-4">Socio</th>
-                <th className="py-3.5 px-4">DNI / Documento</th>
-                <th className="py-3.5 px-4">Plan Actual</th>
-                <th className="py-3.5 px-4">Estado de Deuda</th>
-                <th className="py-3.5 px-4">Código QR Seguro</th>
-                <th className="py-3.5 px-4 text-right">Acciones</th>
+              <tr className="border-b-2 border-slate-200 text-xs font-black text-slate-900 uppercase tracking-wider bg-slate-100">
+                <th className="py-4 px-5">Socio</th>
+                <th className="py-4 px-5">Cédula (C.I.)</th>
+                <th className="py-4 px-5">Plan</th>
+                <th className="py-4 px-5">Estado</th>
+                <th className="py-4 px-5">Saldo Pendiente</th>
+                <th className="py-4 px-5 text-right">Acciones</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60 text-xs">
-              {filteredMembers.map((member) => {
-                const isDebtor = member.debtAmount > 0;
-                return (
-                  <tr key={member.id} className="hover:bg-slate-800/40 transition-colors">
-                    <td className="py-3.5 px-4">
-                      <div className="flex items-center gap-3">
-                        <img
-                          src={member.avatarUrl}
-                          alt={member.name}
-                          className="w-9 h-9 rounded-full object-cover border border-slate-700"
-                        />
-                        <div>
-                          <p className="font-bold text-slate-100">{member.name} {member.lastName}</p>
-                          <p className="text-[11px] text-slate-400">{member.email}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-4 text-slate-300 font-mono">{member.dni}</td>
-                    <td className="py-3.5 px-4">
-                      <span className="text-slate-300 font-medium">{member.planName}</span>
-                      <p className="text-[10px] text-slate-500">Vence: {member.expirationDate}</p>
-                    </td>
-                    <td className="py-3.5 px-4">
-                      {isDebtor ? (
-                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-300 font-bold">
-                          <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />
-                          <span>Debe ${member.debtAmount.toFixed(2)}</span>
-                        </div>
-                      ) : (
-                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-semibold">
-                          <CheckCircle className="w-3.5 h-3.5" />
-                          <span>Al Día ($0.00)</span>
-                        </div>
-                      )}
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <button
-                        onClick={() => setViewQrMember(member)}
-                        className="inline-flex items-center gap-1.5 text-slate-300 hover:text-emerald-400 text-xs font-mono bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800 hover:border-emerald-500/40 transition-colors"
-                      >
-                        <KeyRound className="w-3.5 h-3.5 text-emerald-400" />
-                        <span>Ver QR Seguro</span>
-                      </button>
-                    </td>
-                    <td className="py-3.5 px-4 text-right">
-                      {isDebtor ? (
-                        <button
-                          onClick={() => onOpenPaymentModal(member)}
-                          className="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold px-3 py-1.5 rounded-lg text-xs inline-flex items-center gap-1 shadow-md transition-colors"
-                        >
-                          <DollarSign className="w-3.5 h-3.5" /> Cobrar Deuda
-                        </button>
-                      ) : (
-                        <span className="text-[11px] text-slate-500 italic">Sin pendiente</span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-
-              {filteredMembers.length === 0 && (
+            <tbody className="divide-y-2 divide-slate-100 text-sm font-bold text-slate-800">
+              {filteredMembers.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-8 text-center text-slate-500 text-xs">
-                    No se encontraron socios con los filtros aplicados.
+                  <td colSpan={6} className="py-16 text-center text-slate-500 font-bold">
+                    No se encontraron socios registrados con el filtro especificado.
                   </td>
                 </tr>
+              ) : (
+                filteredMembers.map((member) => {
+                  const isDebtor = member.debtAmount > 0;
+                  const avatar = getMemberAvatarUrl(member.name, member.lastName, member.avatarUrl);
+
+                  return (
+                    <tr key={member.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="py-4 px-5">
+                        <div className="flex items-center gap-3">
+                          <img
+                            src={avatar}
+                            alt=""
+                            className="w-11 h-11 rounded-2xl object-cover border-2 border-slate-300 shadow-sm shrink-0"
+                          />
+                          <div>
+                            <p className="font-black text-slate-900 leading-tight">
+                              {member.name} {member.lastName}
+                            </p>
+                            <p className="text-xs text-slate-500 font-medium">{member.phone}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-4 px-5 font-mono text-slate-900 font-black">{member.dni}</td>
+                      <td className="py-4 px-5">{member.planName}</td>
+                      <td className="py-4 px-5">
+                        {isDebtor ? (
+                          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-xl bg-rose-600 text-white font-black text-xs shadow">
+                            <AlertTriangle className="w-3.5 h-3.5 stroke-[3]" /> MOROSO
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-xl bg-emerald-600 text-white font-black text-xs shadow">
+                            <CheckCircle className="w-3.5 h-3.5 stroke-[3]" /> AL DÍA
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-4 px-5">
+                        {isDebtor ? (
+                          <span className="text-rose-600 font-black text-base">${member.debtAmount.toFixed(2)}</span>
+                        ) : (
+                          <span className="text-emerald-700 font-extrabold">$0.00</span>
+                        )}
+                      </td>
+                      <td className="py-4 px-5 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => setViewQrMember(member)}
+                            className="p-2 bg-slate-100 hover:bg-slate-200 border-2 border-slate-300 text-slate-900 rounded-xl transition-all shadow-sm"
+                            title="Ver pase QR"
+                          >
+                            <QrCode className="w-4 h-4 stroke-[2.5]" />
+                          </button>
+                          {isDebtor && (
+                            <button
+                              onClick={() => onOpenPaymentModal(member)}
+                              className="bg-emerald-600 hover:bg-emerald-700 text-white border-2 border-emerald-500 font-black px-3 py-1.5 rounded-xl text-xs flex items-center gap-1 transition-all shadow-md"
+                            >
+                              <DollarSign className="w-3.5 h-3.5 stroke-[3]" /> Cobrar
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* Add New Member Modal */}
+      {/* Modal Registrar Nuevo Socio Claro */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
-            <h3 className="text-lg font-bold text-slate-100 flex items-center gap-2">
-              <UserPlus className="w-5 h-5 text-emerald-400" /> Registrar Nuevo Socio
-            </h3>
-            <form onSubmit={handleCreateMember} className="space-y-3">
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white border-4 border-slate-300 rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl space-y-6 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b-2 border-slate-200 pb-4">
+              <h3 className="text-2xl font-black text-slate-900 flex items-center gap-2">
+                <UserPlus className="w-6 h-6 text-emerald-600 stroke-[2.5]" />
+                Registrar Nuevo Socio
+              </h3>
+              <button
+                onClick={() => setShowAddModal(false)}
+                className="text-slate-400 hover:text-slate-700 font-black text-xl"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateMember} className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">Nombre *</label>
+                  <label className="block text-xs font-black text-slate-900 mb-1">Nombre *</label>
                   <input
                     type="text"
                     required
                     value={newName}
                     onChange={(e) => setNewName(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
+                    placeholder="Ej. Carlos"
+                    className="w-full bg-slate-50 border-2 border-slate-300 rounded-xl px-3.5 py-2.5 text-sm font-bold text-slate-900 focus:outline-none focus:border-emerald-600"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">Apellido *</label>
+                  <label className="block text-xs font-black text-slate-900 mb-1">Apellido *</label>
                   <input
                     type="text"
                     required
                     value={newLastName}
                     onChange={(e) => setNewLastName(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
+                    placeholder="Ej. Silva"
+                    className="w-full bg-slate-50 border-2 border-slate-300 rounded-xl px-3.5 py-2.5 text-sm font-bold text-slate-900 focus:outline-none focus:border-emerald-600"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs text-slate-400 mb-1">DNI / Documento *</label>
+                <label className="block text-xs font-black text-slate-900 mb-1">Cédula (C.I.) *</label>
                 <input
                   type="text"
                   required
                   value={newDni}
                   onChange={(e) => setNewDni(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
+                  placeholder="Ej. 18492048"
+                  className="w-full bg-slate-50 border-2 border-slate-300 rounded-xl px-3.5 py-2.5 text-sm font-bold text-slate-900 focus:outline-none focus:border-emerald-600 font-mono"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">Teléfono</label>
+                  <label className="block text-xs font-black text-slate-900 mb-1">Teléfono</label>
                   <input
                     type="text"
                     value={newPhone}
                     onChange={(e) => setNewPhone(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
+                    placeholder="+58 414 000-0000"
+                    className="w-full bg-slate-50 border-2 border-slate-300 rounded-xl px-3.5 py-2.5 text-sm font-bold text-slate-900 focus:outline-none focus:border-emerald-600"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">Plan Inicial</label>
+                  <label className="block text-xs font-black text-slate-900 mb-1">Plan</label>
                   <select
                     value={newPlan}
                     onChange={(e) => setNewPlan(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
+                    className="w-full bg-slate-50 border-2 border-slate-300 rounded-xl px-3.5 py-2.5 text-sm font-bold text-slate-900 focus:outline-none focus:border-emerald-600"
                   >
                     <option value="Musculación Standard">Musculación Standard</option>
                     <option value="Pase Total VIP (Mensual)">Pase Total VIP (Mensual)</option>
@@ -310,30 +337,30 @@ export const AdminMembers: React.FC<AdminMembersProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs text-slate-400 mb-1">Saldo o Deuda Inicial ($)</label>
+                <label className="block text-xs font-black text-slate-900 mb-1">Deuda Inicial ($)</label>
                 <input
                   type="number"
                   min="0"
                   step="0.01"
                   value={initialDebt}
                   onChange={(e) => setInitialDebt(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
+                  className="w-full bg-slate-50 border-2 border-slate-300 rounded-xl px-3.5 py-2.5 text-sm font-bold text-slate-900 focus:outline-none focus:border-emerald-600 font-mono"
                 />
               </div>
 
-              <div className="pt-3 flex gap-2 justify-end">
+              <div className="pt-4 flex gap-3">
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 rounded-xl text-xs text-slate-400 hover:text-white"
+                  className="flex-1 bg-slate-100 border-2 border-slate-300 text-slate-800 font-black py-3 rounded-2xl text-sm"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-lg shadow-emerald-600/20"
+                  className="flex-1 bg-emerald-600 text-white font-black py-3 rounded-2xl text-sm shadow-xl border-2 border-emerald-500"
                 >
-                  <KeyRound className="w-3.5 h-3.5" /> Generar QR Firmado & Registrar
+                  Guardar Socio
                 </button>
               </div>
             </form>
@@ -341,94 +368,50 @@ export const AdminMembers: React.FC<AdminMembersProps> = ({
         </div>
       )}
 
-      {/* QR Viewer & Export Modal */}
+      {/* Modal Pase QR del Socio Claro */}
       {viewQrMember && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-sm w-full p-6 shadow-2xl text-center space-y-4">
-            <div>
-              <h3 className="text-lg font-bold text-slate-100 flex items-center justify-center gap-1.5">
-                <ShieldCheck className="w-5 h-5 text-emerald-400" />
-                Pase QR Firmado: {viewQrMember.name}
-              </h3>
-              <p className="text-xs text-slate-400 mt-1">Protegido con Criptografía HMAC-SHA256</p>
-            </div>
-
-            {/* Renderable Canvas for PNG Export */}
-            <div id="qr-export-card" className="p-5 bg-white rounded-2xl inline-block shadow-xl border-4 border-slate-800">
-              <QRCodeCanvas
-                id="qr-canvas-element"
-                value={viewQrMember.qrToken}
-                size={180}
-                level="H"
-                includeMargin={true}
-              />
-              <p className="text-[10px] font-bold text-slate-800 uppercase tracking-widest mt-1">FITPASS GIMNASIO</p>
-              <p className="text-xs font-bold text-slate-900">{viewQrMember.name} {viewQrMember.lastName}</p>
-              <p className="text-[9px] font-mono text-slate-500">DNI: {viewQrMember.dni}</p>
-            </div>
-
-            <p className="text-[11px] font-mono text-slate-400 bg-slate-950 p-2.5 rounded-xl border border-slate-800 break-all">
-              {viewQrMember.qrToken}
-            </p>
-
-            <div className="space-y-2 pt-2">
-              <button
-                onClick={() => {
-                  const canvas = document.getElementById('qr-canvas-element') as HTMLCanvasElement;
-                  if (canvas) {
-                    const pngUrl = canvas.toDataURL('image/png');
-                    const downloadLink = document.createElement('a');
-                    downloadLink.href = pngUrl;
-                    downloadLink.download = `Pase-QR-Seguro-${viewQrMember.name}-${viewQrMember.lastName}.png`;
-                    document.body.appendChild(downloadLink);
-                    downloadLink.click();
-                    document.body.removeChild(downloadLink);
-                  }
-                }}
-                className="w-full bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold py-2.5 rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg transition-colors"
-              >
-                📥 Descargar Imagen QR (PNG)
-              </button>
-
-              <button
-                onClick={() => {
-                  const msg = encodeURIComponent(
-                    `Hola ${viewQrMember.name}! Aquí tienes tu Pase QR Seguro de acceso al Gimnasio FITPASS. Presenta este código QR en tu teléfono cada vez que ingreses.`
-                  );
-                  const phoneNum = viewQrMember.phone.replace(/[^0-9]/g, '');
-                  window.open(`https://wa.me/${phoneNum}?text=${msg}`, '_blank');
-                }}
-                className="w-full bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-2"
-              >
-                💬 Enviar Aviso por WhatsApp
-              </button>
-
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white border-4 border-slate-300 rounded-3xl p-6 sm:p-8 max-w-sm w-full shadow-2xl text-center space-y-5 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b-2 border-slate-200 pb-3">
+              <h3 className="text-xl font-black text-slate-900">Pase QR Criptográfico</h3>
               <button
                 onClick={() => setViewQrMember(null)}
-                className="w-full text-slate-400 hover:text-slate-200 py-1.5 text-xs"
+                className="text-slate-400 hover:text-slate-700 font-black text-xl"
               >
-                Cerrar
+                ✕
               </button>
+            </div>
+
+            <div className="bg-slate-50 p-6 rounded-3xl border-2 border-slate-200 inline-block shadow-inner">
+              <QRCodeCanvas value={viewQrMember.qrToken} size={200} level="H" />
+            </div>
+
+            <div>
+              <h4 className="text-xl font-black text-slate-900">
+                {viewQrMember.name} {viewQrMember.lastName}
+              </h4>
+              <p className="text-sm font-bold text-slate-600 font-mono mt-0.5">C.I.: {viewQrMember.dni}</p>
+            </div>
+
+            <div className="bg-emerald-50 border-2 border-emerald-200 rounded-2xl p-3 text-xs font-black text-emerald-800 flex items-center justify-center gap-1.5">
+              <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+              Cifrado AES-GCM Sin Datos Personales
             </div>
           </div>
         </div>
       )}
 
-      {/* Mass Excel Import Modal */}
-      {showExcelModal && (
+      {/* Modal Importar Excel */}
+      {showExcelModal && onAddMembersBatch && (
         <ExcelImportModal
           existingMembers={members}
           onClose={() => setShowExcelModal(false)}
-          onImportSuccess={async (newMembersBatch) => {
-            if (onAddMembersBatch) {
-              await onAddMembersBatch(newMembersBatch);
-            } else {
-              newMembersBatch.forEach((m) => onAddMember(m));
-            }
+          onImportSuccess={async (batch: Member[]) => {
+            await onAddMembersBatch(batch);
+            setShowExcelModal(false);
           }}
         />
       )}
     </div>
   );
 };
-

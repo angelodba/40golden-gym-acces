@@ -13,7 +13,7 @@ import { Loader2 } from 'lucide-react';
 
 export const App: React.FC = () => {
   const { members, loading: membersLoading, addMember, addMembersBatch, handlePaymentSuccess } = useMembers();
-  const { logs, loading: logsLoading, logAccess } = useAccessLogs();
+  const { logs, loading: logsLoading, logAccess, clearLogs } = useAccessLogs();
 
   const [paymentModalMember, setPaymentModalMember] = useState<Member | null>(null);
 
@@ -67,7 +67,7 @@ export const App: React.FC = () => {
               />
             }
           />
-          <Route path="/admin/logs" element={<AccessLogs logs={logs} />} />
+          <Route path="/admin/logs" element={<AccessLogs logs={logs} onClearLogs={clearLogs} />} />
           <Route path="*" element={<Navigate to="/reception" replace />} />
         </Routes>
       </main>

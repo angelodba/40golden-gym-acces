@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { AccessLog } from '../types';
-import { getAccessLogs, addAccessLogToStorage } from '../services/supabaseService';
+import { getAccessLogs, addAccessLogToStorage, clearAccessLogsInStorage } from '../services/supabaseService';
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
 
 const LS_KEY = 'fitpass_logs';
@@ -9,6 +9,26 @@ export function useAccessLogs() {
   const [logs, setLogs] = useState<AccessLog[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [initialLoadOk, setInitialLoadOk] = useState<boolean>(false);
+
+  // ── Limpieza automática al inicio de cada nuevo día (00:00 Medianoche) ────
+  useEffect(() => {
+    const checkAndPurgeNewDay = () => {
+      const todayStr = new Date().toISOString().split('T')[0];
+      const lastPurgeDate = localStorage.getItem('fitpass_last_purge_date');
+
+      if (lastPurgeDate && lastPurgeDate !== todayStr) {
+        console.log('[useAccessLogs] Nuevo día detectado. Reseteando flujo diario de pases en pantalla...');
+        setLogs([]);
+        localStorage.setItem('fitpass_last_purge_date', todayStr);
+      } else if (!lastPurgeDate) {
+        localStorage.setItem('fitpass_last_purge_date', todayStr);
+      }
+    };
+
+    checkAndPurgeNewDay();
+    const interval = setInterval(checkAndPurgeNewDay, 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   // ── Carga inicial ─────────────────────────────────────────────────────────
   useEffect(() => {
@@ -101,9 +121,15 @@ export function useAccessLogs() {
     await addAccessLogToStorage(newLog);
   }, []);
 
+  const clearLogs = useCallback(async () => {
+    setLogs([]);
+    await clearAccessLogsInStorage();
+  }, []);
+
   return {
     logs,
     loading,
     logAccess,
+    clearLogs,
   };
 }

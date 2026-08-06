@@ -12,13 +12,17 @@ export function isUuid(id: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 }
 
+import { getMemberAvatarUrl } from '../utils/avatarUtils';
+
 /** Mapea una fila de la tabla 'socios' al tipo Member del frontend */
 export function mapRowToMember(item: Record<string, unknown>): Member {
+  const name = (item.nombre as string) || '';
+  const lastName = (item.apellido as string) || '';
   return {
     id: item.id as string,
     qrToken: item.qr_token as string,
-    name: item.nombre as string,
-    lastName: item.apellido as string,
+    name,
+    lastName,
     dni: item.dni as string,
     phone: (item.telefono as string) || '',
     email: (item.email as string) || '',
@@ -30,11 +34,29 @@ export function mapRowToMember(item: Record<string, unknown>): Member {
         : 'ACTIVE',
     debtAmount: Number(item.saldo_pendiente) || 0,
     expirationDate: item.fecha_vencimiento as string,
-    avatarUrl:
-      (item.foto_url as string) ||
-      'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200',
+    avatarUrl: getMemberAvatarUrl(name, lastName, item.foto_url as string),
     planName: (item.plan_nombre as string) || 'Musculación Standard',
   };
+}
+
+/**
+ * Limpiar o purgar el historial de accesos (en Supabase y LocalStorage).
+ */
+export async function clearAccessLogsInStorage(): Promise<void> {
+  localStorage.removeItem(LOCAL_STORAGE_LOGS_KEY);
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { error } = await supabase
+        .from('registros_acceso')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000');
+      if (error) {
+        console.warn('[supabaseService] Error al purgar registros_acceso en Supabase:', error.message);
+      }
+    } catch (err) {
+      console.error('[supabaseService] Excepción al purgar registros_acceso:', err);
+    }
+  }
 }
 
 // ─── Socios ───────────────────────────────────────────────────────────────────
