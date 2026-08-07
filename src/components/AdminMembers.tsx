@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Member, ExchangeRates, Currency } from '../types';
+import { Member, ExchangeRates, Currency, PaymentMethod } from '../types';
 import { generateSecureQrToken } from '../utils/crypto';
 import { exportMembersToExcel } from '../utils/excelUtils';
 import { getMemberAvatarUrl } from '../utils/avatarUtils';
 import { getSavedExchangeRates, saveExchangeRates, formatCurrency, getDaysRemaining } from '../utils/currencyUtils';
 import { ExcelImportModal } from './ExcelImportModal';
-import { Users, UserPlus, Search, DollarSign, QrCode, AlertTriangle, CheckCircle, ShieldCheck, FileSpreadsheet, Download, Calendar, Coins, ArrowRightLeft, Clock } from 'lucide-react';
+import { DebtManagementPanel } from './members/DebtManagementPanel';
+import { Users, UserPlus, Search, DollarSign, QrCode, AlertTriangle, CheckCircle, ShieldCheck, FileSpreadsheet, Download, Calendar, Coins, ArrowRightLeft, Clock, TrendingDown } from 'lucide-react';
 import { QRCodeCanvas } from 'qrcode.react';
 
 interface AdminMembersProps {
@@ -13,14 +14,27 @@ interface AdminMembersProps {
   onAddMember: (newMember: Member) => void;
   onAddMembersBatch?: (newMembers: Member[]) => Promise<Member[] | void>;
   onOpenPaymentModal: (member: Member) => void;
+  onPaymentSuccess?: (
+    memberId: string,
+    amountPaidUSD: number,
+    method: PaymentMethod,
+    currency?: Currency,
+    amountOriginal?: number,
+    exchangeRate?: number,
+    daysExtension?: number
+  ) => Promise<void> | void;
 }
+
+type AdminTab = 'members' | 'collections';
 
 export const AdminMembers: React.FC<AdminMembersProps> = ({
   members,
   onAddMember,
   onAddMembersBatch,
   onOpenPaymentModal,
+  onPaymentSuccess,
 }) => {
+  const [activeTab, setActiveTab] = useState<AdminTab>('members');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'ALL' | 'ACTIVE' | 'DEBTOR' | 'EXPIRING_SOON' | 'EXPIRED'>('ALL');
   const [showAddModal, setShowAddModal] = useState(false);
@@ -106,6 +120,8 @@ export const AdminMembers: React.FC<AdminMembersProps> = ({
   // Totales financieros de cartera
   const totalDebtUSD = members.reduce((acc, m) => acc + m.debtAmount, 0);
 
+  const debtorCount = members.filter((m) => m.debtAmount > 0).length;
+
   return (
     <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
       {/* Header & Control General */}
@@ -157,6 +173,36 @@ export const AdminMembers: React.FC<AdminMembersProps> = ({
         </div>
       </div>
 
+      {/* Tab Navigation: Socios / Cobranzas */}
+      <div className="flex items-center gap-1 bg-slate-100 border-2 border-slate-200 rounded-2xl p-1 w-fit">
+        <button
+          onClick={() => setActiveTab('members')}
+          className={`px-5 py-2.5 rounded-xl text-sm font-black transition-all flex items-center gap-2 ${
+            activeTab === 'members'
+              ? 'bg-white text-slate-900 shadow border border-slate-200'
+              : 'text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          <Users className="w-4 h-4" /> Lista de Socios
+        </button>
+        <button
+          onClick={() => setActiveTab('collections')}
+          className={`px-5 py-2.5 rounded-xl text-sm font-black transition-all flex items-center gap-2 ${
+            activeTab === 'collections'
+              ? 'bg-white text-slate-900 shadow border border-slate-200'
+              : 'text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          <TrendingDown className="w-4 h-4" />
+          Gestión de Cobranzas
+          {debtorCount > 0 && (
+            <span className="ml-1 bg-rose-600 text-white font-black text-[10px] px-1.5 py-0.5 rounded-full leading-none">
+              {debtorCount}
+            </span>
+          )}
+        </button>
+      </div>
+
       {/* Panel Ajuste de Tasas Multi-Moneda */}
       {showRateConfig && (
         <div className="bg-emerald-50 border-2 border-emerald-300 rounded-3xl p-5 shadow-lg space-y-3 animate-in fade-in zoom-in-95 duration-200">
@@ -204,6 +250,18 @@ export const AdminMembers: React.FC<AdminMembersProps> = ({
         </div>
       )}
 
+      {/* ── Pestaña: Gestión de Cobranzas ───────────────────────────────── */}
+      {activeTab === 'collections' && onPaymentSuccess && (
+        <DebtManagementPanel members={members} onPaymentSuccess={onPaymentSuccess} />
+      )}
+      {activeTab === 'collections' && !onPaymentSuccess && (
+        <div className="bg-amber-50 border-2 border-amber-200 rounded-2xl p-6 text-center">
+          <p className="text-sm font-bold text-amber-700">El módulo de cobranzas requiere que <code>onPaymentSuccess</code> esté configurado en App.tsx.</p>
+        </div>
+      )}
+
+      {activeTab === 'members' && (
+      <>
       {/* Resumen de Cartera y Totales en Monedas */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-white border-2 border-slate-200 rounded-2xl p-4 shadow-sm flex items-center justify-between">
@@ -549,6 +607,8 @@ export const AdminMembers: React.FC<AdminMembersProps> = ({
             setShowExcelModal(false);
           }}
         />
+      )}
+      </>
       )}
     </div>
   );

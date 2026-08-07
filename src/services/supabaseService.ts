@@ -444,30 +444,16 @@ export async function processPayment(
 
   if (isSupabaseConfigured && supabase && isUuid(memberId)) {
     try {
-      const { data, error } = await supabase.rpc('registrar_pago_socio', {
+      // 1. Intentar llamar a la nueva RPC auditada transaccional v2
+      const { data, error } = await supabase.rpc('registrar_pago_con_auditoria', {
         p_socio_id: memberId,
-        p_monto: amountUSD,
+        p_monto_usd: amountUSD,
+        p_monto_original: amountOriginal || amountUSD,
+        p_moneda: currency,
+        p_tasa_cambio: exchangeRate || 1,
         p_metodo_pago: method,
+        p_dias_extension: daysExtension,
       });
-
-      // Registrar historial en la tabla de pagos
-      try {
-        await supabase
-          .from('pagos')
-          .insert([
-            {
-              socio_id: memberId,
-              monto_usd: amountUSD,
-              monto_original: amountOriginal || amountUSD,
-              moneda: currency,
-              tasa_cambio: exchangeRate || 1,
-              metodo_pago: method,
-              fecha_vencimiento_resultante: nextExpDate,
-            },
-          ]);
-      } catch (e: any) {
-        console.warn('[supabaseService] No se pudo guardar en tabla pagos:', e?.message);
-      }
 
       if (!error && data?.success) {
         return {
@@ -477,8 +463,22 @@ export async function processPayment(
         };
       }
 
+      // Fallback a RPC v1 si la v2 no está cargada aún
       if (error) {
-        console.error('[supabaseService] processPayment RPC error:', error.message);
+        console.warn('[supabaseService] Error en RPC v2, intentando RPC v1:', error.message);
+        const { data: dataV1, error: errorV1 } = await supabase.rpc('registrar_pago_socio', {
+          p_socio_id: memberId,
+          p_monto: amountUSD,
+          p_metodo_pago: method,
+        });
+
+        if (!errorV1 && dataV1?.success) {
+          return {
+            success: true,
+            newDebt: Number(dataV1.newDebt) || 0,
+            newExpirationDate: (dataV1.newExpirationDate as string) || nextExpDate,
+          };
+        }
       }
     } catch (err) {
       console.warn('[supabaseService] processPayment excepción:', err);
@@ -487,3 +487,61 @@ export async function processPayment(
 
   return { success: true, newDebt: 0, newExpirationDate: nextExpDate };
 }
+
+// ─── Consultas de Base de Datos Profunda & Vistas Analíticas ─────────────────
+
+/**
+ * Obtener la lista de socios próximos a vencer (1-7 días) desde la vista SQL
+ */
+export async function getExpiringMembersFromView() {
+  if (isSupabaseConfigured && supabase) {
+    const { data, error } = await supabase
+      .from('vista_socios_proximos_vencer')
+      .select('*');
+
+    if (!error && data) {
+      return data.map((item) => ({
+        id: item.id as string,
+        qrToken: item.qr_token as string,
+        name: item.nombre as string,
+        lastName: item.apellido as string,
+        dni: item.dni as string,
+        email: (item.email as string) || '',
+        phone: (item.telefono as string) || '',
+        planName: (item.plan_nombre as string) || 'Standard',
+        expirationDate: item.fecha_vencimiento as string,
+        daysRemaining: Number(item.dias_restantes) || 0,
+        debtAmount: Number(item.saldo_pendiente) || 0,
+        status: item.estado as string,
+      }));
+    }
+  }
+  return [];
+}
+
+/**
+ * Obtener los registros de auditoría del sistema
+ */
+export async function getAuditLogs(limit: number = 100) {
+  if (isSupabaseConfigured && supabase) {
+    const { data, error } = await supabase
+      .from('auditoria_sistema')
+      .select('*')
+      .order('creado_en', { ascending: false })
+      .limit(limit);
+
+    if (!error && data) {
+      return data.map((item) => ({
+        id: item.id as string,
+        tableAffected: item.tabla_afectada as string,
+        operation: item.operacion as string,
+        memberId: item.socio_id as string,
+        details: (item.detalles as Record<string, unknown>) || {},
+        performedBy: (item.realizado_por as string) || 'SISTEMA',
+        createdAt: item.creado_en as string,
+      }));
+    }
+  }
+  return [];
+}
+

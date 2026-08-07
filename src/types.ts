@@ -46,3 +46,53 @@ export interface PaymentRecord {
   newExpirationDate: string;
   note?: string;
 }
+
+export interface MembershipHistory {
+  id: string;
+  memberId: string;
+  planName: string;
+  startDate: string;
+  endDate: string;
+  status: 'ACTIVA' | 'PAUSADA' | 'VENCIDA' | 'CANCELADA';
+  pauseReason?: string;
+  createdAt: string;
+}
+
+export interface AuditLog {
+  id: string;
+  tableAffected: string;
+  operation: string;
+  memberId?: string;
+  details: Record<string, unknown>;
+  performedBy: string;
+  createdAt: string;
+}
+
+export interface ExpiringMemberView {
+  id: string;
+  qrToken: string;
+  name: string;
+  lastName: string;
+  dni: string;
+  email: string;
+  phone: string;
+  planName: string;
+  expirationDate: string;
+  daysRemaining: number;
+  debtAmount: number;
+  status: string;
+}
+
+export interface FinancialSummaryView {
+  month: string;
+  paymentMethod: PaymentMethod;
+  totalTransactions: number;
+  totalCollectedUSD: number;
+}
+
+export interface DailyAttendanceView {
+  date: string;
+  accessStatus: 'GRANTED' | 'DENIED';
+  totalAccesses: number;
+}
+
