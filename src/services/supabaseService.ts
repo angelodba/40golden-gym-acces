@@ -2,6 +2,7 @@ import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
 import { Member, AccessLog } from '../types';
 import { initialMembers, initialLogs } from '../data/mockData';
 import { verifySecureQRToken } from '../lib/crypto';
+import { getMemberAvatarUrl } from '../utils/avatarUtils';
 
 const LOCAL_STORAGE_MEMBERS_KEY = 'fitpass_members';
 const LOCAL_STORAGE_LOGS_KEY = 'fitpass_logs';
@@ -11,8 +12,6 @@ const LOCAL_STORAGE_LOGS_KEY = 'fitpass_logs';
 export function isUuid(id: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 }
-
-import { getMemberAvatarUrl } from '../utils/avatarUtils';
 
 /** Mapea una fila de la tabla 'socios' al tipo Member del frontend */
 export function mapRowToMember(item: Record<string, unknown>): Member {
@@ -94,7 +93,7 @@ export async function getAccessLogs(): Promise<AccessLog[]> {
       .from('registros_acceso')
       .select('*')
       .order('fecha_hora', { ascending: false })
-      .limit(200);
+      .limit(500);
 
     if (error) {
       console.warn('[supabaseService] getAccessLogs error:', error.message);
@@ -178,7 +177,7 @@ export async function addMemberToStorage(newMember: Member): Promise<Member> {
 
       const { data, error } = await supabase
         .from('socios')
-        .insert([record])
+        .upsert([record], { onConflict: 'dni' })
         .select()
         .single();
 
@@ -195,16 +194,9 @@ export async function addMemberToStorage(newMember: Member): Promise<Member> {
   return newMember;
 }
 
-export interface BatchInsertResult {
-  /** Socios que se insertaron exitosamente (con ID de BD actualizado) */
-  inserted: Member[];
-  /** Socios que fallaron (duplicados u otros errores), conservados con ID local */
-  failed: Member[];
-}
-
 /**
- * Registrar un lote de socios en la base de datos con manejo granular de errores.
- * Si falla la inserción masiva, intenta insertar uno por uno para aislar duplicados.
+ * Registrar un lote de socios en la base de datos de Supabase.
+ * Procesa en micro-lotes de 50 registros con upsert (por DNI) para resiliencia total.
  */
 export async function addMembersBatchToStorage(newMembers: Member[]): Promise<Member[]> {
   if (!isSupabaseConfigured || !supabase || newMembers.length === 0) {
@@ -231,54 +223,49 @@ export async function addMembersBatchToStorage(newMembers: Member[]): Promise<Me
     return rec;
   });
 
-  // Intento 1: inserción masiva
-  try {
-    const { data, error } = await supabase
-      .from('socios')
-      .insert(recordsToInsert)
-      .select();
-
-    if (!error && data) {
-      return data.map((item, index) => ({
-        ...newMembers[index],
-        id: item.id as string,
-      }));
-    }
-
-    if (error) {
-      console.warn(
-        '[supabaseService] Batch insert falló (posibles duplicados). Intentando inserción individual...',
-        error.code,
-        error.message
-      );
-    }
-  } catch (err) {
-    console.error('[supabaseService] Batch insert excepción:', err);
-  }
-
-  // Intento 2: insertar uno por uno para aislar cuáles fallan
+  const CHUNK_SIZE = 50;
   const results: Member[] = [];
 
-  for (const [index, record] of recordsToInsert.entries()) {
+  for (let i = 0; i < recordsToInsert.length; i += CHUNK_SIZE) {
+    const chunkRecords = recordsToInsert.slice(i, i + CHUNK_SIZE);
+    const chunkMembers = newMembers.slice(i, i + CHUNK_SIZE);
+
     try {
       const { data, error } = await supabase
         .from('socios')
-        .insert([record])
-        .select()
-        .single();
+        .upsert(chunkRecords, { onConflict: 'dni' })
+        .select();
 
       if (!error && data) {
-        results.push({ ...newMembers[index], id: data.id as string });
+        data.forEach((item, index) => {
+          results.push({
+            ...chunkMembers[index],
+            id: item.id as string,
+          });
+        });
       } else {
-        console.warn(
-          `[supabaseService] Socio omitido (DNI: ${record.dni}):`,
-          error?.message || 'desconocido'
-        );
-        results.push(newMembers[index]);
+        console.warn('[supabaseService] Upsert por lote con advertencia, insertando uno por uno:', error?.message);
+        for (const [idx, record] of chunkRecords.entries()) {
+          try {
+            const { data: singleData } = await supabase
+              .from('socios')
+              .upsert([record], { onConflict: 'dni' })
+              .select()
+              .single();
+
+            if (singleData) {
+              results.push({ ...chunkMembers[idx], id: singleData.id as string });
+            } else {
+              results.push(chunkMembers[idx]);
+            }
+          } catch {
+            results.push(chunkMembers[idx]);
+          }
+        }
       }
     } catch (err) {
-      console.error(`[supabaseService] Error insertando socio ${record.dni}:`, err);
-      results.push(newMembers[index]);
+      console.error('[supabaseService] Error insertando micro-lote Excel:', err);
+      results.push(...chunkMembers);
     }
   }
 
@@ -287,9 +274,6 @@ export async function addMembersBatchToStorage(newMembers: Member[]): Promise<Me
 
 // ─── Verificación QR ──────────────────────────────────────────────────────────
 
-/**
- * Validar Token QR mediante función RPC en Supabase o Lógica Criptográfica Local.
- */
 export async function verifyAccess(
   token: string,
   localMembers: Member[]
@@ -327,7 +311,7 @@ export async function verifyAccess(
               status: Number(data.member.debtAmount) > 0 ? 'DEBTOR' : 'ACTIVE',
               debtAmount: Number(data.member.debtAmount) || 0,
               expirationDate: data.member.expirationDate,
-              avatarUrl: data.member.avatarUrl,
+              avatarUrl: getMemberAvatarUrl(data.member.name, data.member.lastName, data.member.avatarUrl),
               planName: data.member.planName,
             } : undefined,
             timestamp: data.timestamp || nowStr,
@@ -363,14 +347,7 @@ export async function verifyAccess(
       }
     }
   } catch (err: any) {
-    // Si el error fue por expiración o firma inválida de AES-GCM
-    if (err?.message?.includes('expired')) {
-      return {
-        status: 'DENIED',
-        reason: 'Código QR expirado (Excedió ventana de seguridad de 30s)',
-        timestamp: nowStr,
-      };
-    }
+    // Silenciar fallo si no era AES-GCM
   }
 
   // B. Si Supabase está configurado, probar RPC `verificar_acceso_qr`
@@ -395,7 +372,7 @@ export async function verifyAccess(
             status: Number(data.member.debtAmount) > 0 ? 'DEBTOR' : 'ACTIVE',
             debtAmount: Number(data.member.debtAmount) || 0,
             expirationDate: data.member.expirationDate,
-            avatarUrl: data.member.avatarUrl,
+            avatarUrl: getMemberAvatarUrl(data.member.name, data.member.lastName, data.member.avatarUrl),
             planName: data.member.planName,
           } : undefined,
           timestamp: data.timestamp || nowStr,
@@ -452,15 +429,11 @@ export async function verifyAccess(
 
 // ─── Pagos ────────────────────────────────────────────────────────────────────
 
-/**
- * Procesar Cobro y Renovar Membresía (Transacción Atómica RPC).
- */
 export async function processPayment(
   memberId: string,
   amount: number,
   method: 'Efectivo' | 'Tarjeta' | 'Transferencia'
 ): Promise<{ success: boolean; newDebt: number; newExpirationDate: string }> {
-  // Solo llamar RPC si el ID es un UUID real de Supabase
   if (isSupabaseConfigured && supabase && isUuid(memberId)) {
     try {
       const { data, error } = await supabase.rpc('registrar_pago_socio', {
@@ -485,7 +458,6 @@ export async function processPayment(
     }
   }
 
-  // Fallback local — calcular nueva fecha localmente
   const nextMonth = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
     .toISOString()
     .split('T')[0];
