@@ -34,6 +34,8 @@ export const MobileScannerTerminal: React.FC<MobileScannerTerminalProps> = ({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const lastScanFrameTimeRef = useRef<number>(0);
+  const isProcessingRef = useRef<boolean>(false);
   const lastScannedTimeRef = useRef<number>(0);
   const scanningRef = useRef<boolean>(false);
   const membersRef = useRef<Member[]>(members);
@@ -69,8 +71,12 @@ export const MobileScannerTerminal: React.FC<MobileScannerTerminalProps> = ({
     setLastScannedToken(token);
     setTimeout(() => setLastScannedToken(null), 1500);
 
-    if (navigator.vibrate) {
-      navigator.vibrate([100, 50, 100]);
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      try {
+        navigator.vibrate([100, 50, 100]);
+      } catch (e) {
+        // Ignorar si el navegador o dispositivo bloquea vibración
+      }
     }
 
     // 1. Emitir evento por WebSocket / Broadcast a otros dispositivos (Pantalla de Recepción)
@@ -150,22 +156,44 @@ export const MobileScannerTerminal: React.FC<MobileScannerTerminalProps> = ({
 
   const scanFrame = () => {
     if (!scanningRef.current) return;
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
+    const now = performance.now();
 
-    if (video && canvas && video.readyState === video.HAVE_ENOUGH_DATA) {
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      const ctx = canvas.getContext('2d', { willReadFrequently: true });
-      if (ctx) {
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const code = jsQR(imageData.data, imageData.width, imageData.height, {
-          inversionAttempts: 'dontInvert',
-        });
+    // Limitación de frecuencia: máximo ~10 FPS (100ms entre análisis) para ahorrar CPU/memoria
+    if (now - lastScanFrameTimeRef.current >= 100) {
+      lastScanFrameTimeRef.current = now;
 
-        if (code && code.data) {
-          handleScanSuccess(code.data);
+      // Bloqueo de procesamiento: no procesar mientras se verifica un token previo
+      if (!isProcessingRef.current) {
+        const video = videoRef.current;
+        const canvas = canvasRef.current;
+
+        if (video && canvas && video.readyState === video.HAVE_ENOUGH_DATA) {
+          // Escalar canvas a máximo 640x480 para mantener uso de CPU extremadamente bajo
+          const targetWidth = Math.min(video.videoWidth, 640);
+          const targetHeight = Math.min(video.videoHeight, 480);
+
+          if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
+            canvas.width = targetWidth;
+            canvas.height = targetHeight;
+          }
+
+          const ctx = canvas.getContext('2d', { willReadFrequently: true });
+          if (ctx) {
+            ctx.drawImage(video, 0, 0, targetWidth, targetHeight);
+            const imageData = ctx.getImageData(0, 0, targetWidth, targetHeight);
+            const code = jsQR(imageData.data, imageData.width, imageData.height, {
+              inversionAttempts: 'dontInvert',
+            });
+
+            if (code && code.data) {
+              isProcessingRef.current = true;
+              handleScanSuccess(code.data).finally(() => {
+                setTimeout(() => {
+                  isProcessingRef.current = false;
+                }, SCAN_COOLDOWN_MS);
+              });
+            }
+          }
         }
       }
     }

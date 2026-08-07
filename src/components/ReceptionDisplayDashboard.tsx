@@ -65,7 +65,7 @@ export const ReceptionDisplayDashboard: React.FC<ReceptionDisplayDashboardProps>
   }, []);
 
   // Función centralizada para procesar y desplegar la verificación de un token
-  const processTokenVerification = async (token: string) => {
+  const processTokenVerification = async (token: string, isFromBroadcast = false) => {
     const cleanToken = token.trim();
     if (!cleanToken) return;
 
@@ -107,15 +107,17 @@ export const ReceptionDisplayDashboard: React.FC<ReceptionDisplayDashboardProps>
     // 5. Guardar en estado global / Supabase
     onLogAccess(newLog);
 
-    // 6. Transmitir por Broadcast a otros dispositivos sincronizados
-    await broadcastScanEvent({ token: cleanToken, timestamp: Date.now() });
+    // 6. Transmitir por Broadcast a otros dispositivos SOLO SI el evento se generó manualmente en este terminal
+    if (!isFromBroadcast) {
+      await broadcastScanEvent({ token: cleanToken, timestamp: Date.now() });
+    }
   };
 
   useEffect(() => {
-    // Suscribirse a eventos transmitidos en vivo desde la Terminal Escáner Móvil
+    // Suscribirse a eventos transmitidos en vivo desde la Terminal Escáner Móvil u otros dispositivos
     const unsubscribe = subscribeToScanEvents(async ({ token }) => {
       console.log('[ReceptionDisplay] Evento escaneado recibido por Broadcast:', token);
-      await processTokenVerification(token);
+      await processTokenVerification(token, true);
     });
 
     return () => {
