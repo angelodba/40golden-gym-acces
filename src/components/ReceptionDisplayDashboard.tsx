@@ -3,6 +3,7 @@ import { Member, AccessLog } from '../types';
 import { verifyAccess } from '../services/supabaseService';
 import { subscribeToScanEvents, broadcastScanEvent } from '../utils/broadcast';
 import { playAccessSound, primeAudioContext } from '../utils/audio';
+import { formatDateLatam } from '../utils/dateUtils';
 import {
   Monitor, CheckCircle2, XCircle, AlertTriangle, ShieldCheck,
   Lock, Unlock, DollarSign, History, Sparkles, Clock, User, Zap, Search
@@ -257,8 +258,10 @@ export const ReceptionDisplayDashboard: React.FC<ReceptionDisplayDashboardProps>
                         <span className="text-xl sm:text-2xl font-black text-emerald-800">AL DÍA ($0.00)</span>
                       </div>
                       <div className="bg-white/90 p-4 sm:p-5 rounded-2xl border-2 border-slate-950 shadow">
-                        <span className="block text-slate-800 text-xs sm:text-sm font-black uppercase tracking-wider mb-1">Vencimiento del Plan</span>
-                        <span className="text-xl sm:text-2xl font-black text-slate-950">{lastResult.member.expirationDate}</span>
+                        <div className="flex justify-between items-center text-xs font-black text-slate-500 uppercase tracking-wider">
+                          <span>Vencimiento Pase:</span>
+                        </div>
+                        <span className="text-xl sm:text-2xl font-black text-slate-950">{formatDateLatam(lastResult.member.expirationDate)}</span>
                       </div>
                     </div>
 

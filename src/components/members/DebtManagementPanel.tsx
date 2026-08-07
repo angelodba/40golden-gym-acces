@@ -2,6 +2,7 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { Member, Currency, PaymentMethod, ExchangeRates } from '../../types';
 import { supabase, isSupabaseConfigured } from '../../lib/supabaseClient';
 import { getDaysRemaining, getSavedExchangeRates, formatCurrency } from '../../utils/currencyUtils';
+import { formatDateLatam } from '../../utils/dateUtils';
 import { exportMembersToExcel } from '../../utils/excelUtils';
 import { getMemberAvatarUrl } from '../../utils/avatarUtils';
 import { QuickPaymentModal } from './QuickPaymentModal';
@@ -225,7 +226,7 @@ export const DebtManagementPanel: React.FC<DebtManagementPanelProps> = ({ member
       return;
     }
     targets.forEach((m) => {
-      const msg = `Hola ${m.name} ${m.lastName} 👋\n*40Golden Gym* - Recordatorio:\n💰 Saldo adeudado: *$${m.debtAmount.toFixed(2)} USD*\n📅 Vencimiento: *${m.expirationDate}*\n\n¡Regularice su membresía para seguir entrenando! 💪`;
+      const msg = `Hola ${m.name} ${m.lastName} 👋\n*40Golden Gym* - Recordatorio:\n💰 Saldo adeudado: *$${m.debtAmount.toFixed(2)} USD*\n📅 Vencimiento: *${formatDateLatam(m.expirationDate)}*\n\n¡Regularice su membresía para seguir entrenando! 💪`;
       window.open(`https://wa.me/${m.phone.replace(/\D/g, '')}?text=${encodeURIComponent(msg)}`, '_blank');
     });
   }, [filteredMembers, selectedIds]);
@@ -385,7 +386,7 @@ export const DebtManagementPanel: React.FC<DebtManagementPanelProps> = ({ member
                         <p className="text-xs font-mono font-bold text-slate-400">C.I. {member.dni}</p>
                       </td>
                       <td className="py-4 px-4">
-                        <span className="text-sm font-mono font-black text-slate-800">{member.expirationDate}</span>
+                        <span className="text-sm font-mono font-black text-slate-800">{formatDateLatam(member.expirationDate)}</span>
                         <div className="mt-0.5">
                           {daysLeft < 0 ? (
                             <span className="text-[11px] font-black text-rose-600 flex items-center gap-1">

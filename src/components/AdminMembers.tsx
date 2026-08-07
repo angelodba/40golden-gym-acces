@@ -4,6 +4,7 @@ import { generateSecureQrToken } from '../utils/crypto';
 import { exportMembersToExcel } from '../utils/excelUtils';
 import { getMemberAvatarUrl } from '../utils/avatarUtils';
 import { getSavedExchangeRates, saveExchangeRates, formatCurrency, getDaysRemaining } from '../utils/currencyUtils';
+import { formatDateLatam } from '../utils/dateUtils';
 import { ExcelImportModal } from './ExcelImportModal';
 import { FreezeMembershipModal } from './FreezeMembershipModal';
 import { DebtManagementPanel } from './members/DebtManagementPanel';
@@ -396,7 +397,7 @@ export const AdminMembers: React.FC<AdminMembersProps> = ({
                       <td className="py-4 px-5">{member.planName}</td>
                       <td className="py-4 px-5">
                         <div className="flex flex-col">
-                          <span className="font-mono font-black text-slate-900">{member.expirationDate}</span>
+                          <span className="font-mono font-black text-slate-900">{formatDateLatam(member.expirationDate)}</span>
                           {daysRemaining < 0 ? (
                             <span className="text-[11px] font-black text-rose-600 flex items-center gap-1 mt-0.5">
                               <Clock className="w-3 h-3 stroke-[3]" /> Vencido hace {Math.abs(daysRemaining)} d

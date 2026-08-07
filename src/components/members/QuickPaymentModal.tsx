@@ -7,6 +7,7 @@ import {
   formatCurrency,
   calculateNewExpirationDate,
 } from '../../utils/currencyUtils';
+import { formatDateLatam } from '../../utils/dateUtils';
 import {
   DollarSign,
   CheckCircle2,
@@ -284,7 +285,7 @@ export const QuickPaymentModal: React.FC<QuickPaymentModalProps> = ({
                 ))}
               </div>
               <p className="text-xs font-bold text-emerald-700 mt-2 text-center">
-                Nueva fecha: <strong className="font-mono text-slate-900">{nextExpDate}</strong>
+                Nueva fecha: <strong className="font-mono text-slate-900">{formatDateLatam(nextExpDate)}</strong>
               </p>
             </div>
 

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Member } from '../types';
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
+import { formatDateLatam } from '../utils/dateUtils';
 import { Snowflake, X, Loader2, Calendar, CheckCircle2 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -107,11 +108,11 @@ export const FreezeMembershipModal: React.FC<FreezeMembershipModalProps> = ({
           <div className="bg-sky-50 border-2 border-sky-200 rounded-2xl p-4 space-y-2">
             <div className="flex justify-between text-xs font-black text-sky-900">
               <span>Vencimiento Actual:</span>
-              <span className="font-mono text-slate-900">{member.expirationDate}</span>
+              <span className="font-mono text-slate-900">{formatDateLatam(member.expirationDate)}</span>
             </div>
             <div className="flex justify-between text-xs font-black text-blue-700">
               <span>Nuevo Vencimiento (+{freezeDays}d):</span>
-              <span className="font-mono text-blue-900 font-bold">{newExpDateStr}</span>
+              <span className="font-mono text-blue-900 font-bold">{formatDateLatam(newExpDateStr)}</span>
             </div>
           </div>
 

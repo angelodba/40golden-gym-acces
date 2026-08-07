@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Member } from '../../types';
 import { supabase, isSupabaseConfigured } from '../../lib/supabaseClient';
+import { formatDateLatam } from '../../utils/dateUtils';
 import { X, Send, MessageCircle, Mail, ShieldCheck, Loader2, CheckCircle, AlertTriangle } from 'lucide-react';
 
 interface SendReminderModalProps {
@@ -23,7 +24,7 @@ Le saludamos del equipo de *40Golden Gym*.
 
 🔔 *Recordatorio de Cobro:*
 • Saldo adeudado: *$${member.debtAmount.toFixed(2)} USD*
-• Fecha de vencimiento: *${member.expirationDate}*
+• Fecha de vencimiento: *${formatDateLatam(member.expirationDate)}*
 • Plan activo: ${member.planName}
 
 ${customNote ? `📝 Nota adicional:\n${customNote}\n` : ''}Para regularizar su membresía, acérquese a recepción o contacte a su entrenador.
@@ -38,7 +39,7 @@ Nos ponemos en contacto desde 40Golden Gym para informarle sobre el estado de su
 
 Estado de Cuenta:
 - Saldo Adeudado: $${member.debtAmount.toFixed(2)} USD
-- Fecha de Vencimiento: ${member.expirationDate}
+- Fecha de Vencimiento: ${formatDateLatam(member.expirationDate)}
 - Plan: ${member.planName}
 - Cédula: ${member.dni}
 ${customNote ? `\nNota: ${customNote}\n` : ''}
@@ -137,7 +138,7 @@ Equipo de Administración
                 <div className="bg-amber-50 border-2 border-amber-200 rounded-2xl p-3 flex items-center gap-2">
                   <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
                   <p className="text-xs font-bold text-amber-800">
-                    Saldo moroso: <strong>${member.debtAmount.toFixed(2)} USD</strong> · Vencimiento: {member.expirationDate}
+                    Saldo moroso: <strong>${member.debtAmount.toFixed(2)} USD</strong> · Vencimiento: {formatDateLatam(member.expirationDate)}
                   </p>
                 </div>
               )}

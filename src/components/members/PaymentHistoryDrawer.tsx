@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Member } from '../../types';
 import { supabase, isSupabaseConfigured } from '../../lib/supabaseClient';
 import { formatCurrency, getSavedExchangeRates } from '../../utils/currencyUtils';
+import { formatDateLatam, formatDateTimeLatam } from '../../utils/dateUtils';
 import {
   X,
   History,
@@ -150,12 +151,11 @@ export const PaymentHistoryDrawer: React.FC<PaymentHistoryDrawerProps> = ({ memb
 
                   <div className="flex items-center justify-between pt-2 border-t border-slate-200">
                     <span className="text-[11px] font-bold text-slate-400">
-                      {fecha.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })} {' '}
-                      {fecha.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                      {formatDateTimeLatam(payment.fecha_pago)}
                     </span>
                     {payment.fecha_vencimiento_resultante && (
                       <span className="text-[11px] font-bold text-emerald-600 font-mono">
-                        Hasta: {payment.fecha_vencimiento_resultante}
+                        Hasta: {formatDateLatam(payment.fecha_vencimiento_resultante)}
                       </span>
                     )}
                   </div>
