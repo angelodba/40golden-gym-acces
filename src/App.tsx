@@ -23,7 +23,7 @@ export const App: React.FC = () => {
     return (
       <div className="min-h-screen bg-slate-100 text-slate-900 flex flex-col items-center justify-center font-['Plus_Jakarta_Sans',sans-serif]">
         <Loader2 className="w-12 h-12 text-emerald-600 animate-spin mb-3" />
-        <p className="text-base font-black text-slate-800">Cargando Sistema de Acceso FITPASS...</p>
+        <p className="text-base font-black text-slate-800">Cargando Sistema de Acceso 40GOLDEN GYM...</p>
       </div>
     );
   }
@@ -85,7 +85,7 @@ export const App: React.FC = () => {
 
       {/* Footer */}
       <footer className="bg-white border-t-2 border-slate-200 py-4 text-center text-xs font-bold text-slate-600 shadow-sm">
-        <p>FITPASS System • Control de Acceso QR Criptográfico & Supabase Realtime</p>
+        <p>40GOLDEN GYM • System Control Acceso QR Criptográfico Multi-Moneda & Supabase Realtime</p>
       </footer>
     </div>
   );

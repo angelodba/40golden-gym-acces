@@ -25,9 +25,9 @@ export const Navbar: React.FC<NavbarProps> = ({ debtorCount }) => {
             </div>
             <div>
               <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-                FITPASS
+                40GOLDEN GYM
                 <span className="text-[11px] font-black tracking-widest px-2.5 py-0.5 rounded-full bg-emerald-600 text-white uppercase shadow-sm">
-                  GYM ACCESS
+                  CONTROL ACCESO
                 </span>
               </h1>
               <p className="text-xs font-bold text-slate-600 hidden sm:block">

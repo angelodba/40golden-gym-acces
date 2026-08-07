@@ -1,4 +1,4 @@
-# 🏋️‍♂️ FitPass Gym — Control de Acceso Criptográfico & Monitoreo Realtime
+# 🏋️‍♂️ 40GOLDEN GYM — Control de Acceso Criptográfico & Monitoreo Realtime
 
 Sistema de control de acceso enterprise para gimnasios de arquitectura multi-dispositivo y alta resiliencia. Permite validar la entrada de socios mediante escaneo de códigos QR criptográficos (AES-GCM) sin revelar PII o por búsqueda directa de Cédula (C.I.), transmitiendo los accesos en tiempo real (<30ms) a las pantallas de recepción.
 
