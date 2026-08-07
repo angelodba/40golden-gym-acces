@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Member } from '../types';
+import { Member, Currency, PaymentMethod } from '../types';
 import {
   getMembers,
   addMemberToStorage,
@@ -122,15 +122,19 @@ export function useMembers() {
   const handlePaymentSuccess = useCallback(
     async (
       memberId: string,
-      amountPaid: number,
-      method: 'Efectivo' | 'Tarjeta' | 'Transferencia'
+      amountPaidUSD: number,
+      method: PaymentMethod,
+      currency?: Currency,
+      amountOriginal?: number,
+      exchangeRate?: number,
+      daysExtension: number = 30
     ): Promise<void> => {
-      const result = await processPayment(memberId, amountPaid, method);
+      const result = await processPayment(memberId, amountPaidUSD, method, currency, amountOriginal, exchangeRate, daysExtension);
 
       setMembers((prev) =>
         prev.map((m) => {
           if (m.id !== memberId) return m;
-          const newDebt = Math.max(0, m.debtAmount - amountPaid);
+          const newDebt = Math.max(0, m.debtAmount - amountPaidUSD);
           return {
             ...m,
             debtAmount: newDebt,

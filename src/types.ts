@@ -1,4 +1,11 @@
 export type MemberStatus = 'ACTIVE' | 'DEBTOR' | 'EXPIRED';
+export type Currency = 'USD' | 'VES' | 'COP';
+export type PaymentMethod = 'Efectivo' | 'Tarjeta' | 'Transferencia' | 'Pago Móvil';
+
+export interface ExchangeRates {
+  VES: number; // Tasa de cambio Bolívares (ej. 36.5 Bs / USD)
+  COP: number; // Tasa de cambio Pesos Colombianos (ej. 3900 COP / USD)
+}
 
 export interface Member {
   id: string;
@@ -29,8 +36,13 @@ export interface AccessLog {
 export interface PaymentRecord {
   id: string;
   memberId: string;
-  amount: number;
+  memberName: string;
+  amountUSD: number;
+  amountOriginal: number;
+  currency: Currency;
+  exchangeRate: number;
   date: string;
-  method: 'Efectivo' | 'Tarjeta' | 'Transferencia';
+  method: PaymentMethod;
+  newExpirationDate: string;
   note?: string;
 }

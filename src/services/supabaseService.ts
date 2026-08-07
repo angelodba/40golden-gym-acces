@@ -1,5 +1,5 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
-import { Member, AccessLog } from '../types';
+import { Member, AccessLog, Currency, PaymentMethod } from '../types';
 import { initialMembers, initialLogs } from '../data/mockData';
 import { verifySecureQRToken } from '../lib/crypto';
 import { getMemberAvatarUrl } from '../utils/avatarUtils';
@@ -431,22 +431,49 @@ export async function verifyAccess(
 
 export async function processPayment(
   memberId: string,
-  amount: number,
-  method: 'Efectivo' | 'Tarjeta' | 'Transferencia'
+  amountUSD: number,
+  method: PaymentMethod,
+  currency: Currency = 'USD',
+  amountOriginal?: number,
+  exchangeRate?: number,
+  daysExtension: number = 30
 ): Promise<{ success: boolean; newDebt: number; newExpirationDate: string }> {
+  const nextExpDate = new Date(Date.now() + daysExtension * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .split('T')[0];
+
   if (isSupabaseConfigured && supabase && isUuid(memberId)) {
     try {
       const { data, error } = await supabase.rpc('registrar_pago_socio', {
         p_socio_id: memberId,
-        p_monto: amount,
+        p_monto: amountUSD,
         p_metodo_pago: method,
       });
+
+      // Registrar historial en la tabla de pagos
+      try {
+        await supabase
+          .from('pagos')
+          .insert([
+            {
+              socio_id: memberId,
+              monto_usd: amountUSD,
+              monto_original: amountOriginal || amountUSD,
+              moneda: currency,
+              tasa_cambio: exchangeRate || 1,
+              metodo_pago: method,
+              fecha_vencimiento_resultante: nextExpDate,
+            },
+          ]);
+      } catch (e: any) {
+        console.warn('[supabaseService] No se pudo guardar en tabla pagos:', e?.message);
+      }
 
       if (!error && data?.success) {
         return {
           success: true,
           newDebt: Number(data.newDebt) || 0,
-          newExpirationDate: data.newExpirationDate as string,
+          newExpirationDate: (data.newExpirationDate as string) || nextExpDate,
         };
       }
 
@@ -458,8 +485,5 @@ export async function processPayment(
     }
   }
 
-  const nextMonth = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-    .toISOString()
-    .split('T')[0];
-  return { success: true, newDebt: 0, newExpirationDate: nextMonth };
+  return { success: true, newDebt: 0, newExpirationDate: nextExpDate };
 }

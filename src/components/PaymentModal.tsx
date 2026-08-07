@@ -1,12 +1,21 @@
-import React, { useState } from 'react';
-import { Member } from '../types';
-import { DollarSign, CheckCircle2, Sparkles, Loader2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Member, Currency, PaymentMethod, ExchangeRates } from '../types';
+import { getSavedExchangeRates, convertFromUSD, convertToUSD, formatCurrency, calculateNewExpirationDate } from '../utils/currencyUtils';
+import { DollarSign, CheckCircle2, Sparkles, Loader2, ArrowRightLeft, Calendar, Coins } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 interface PaymentModalProps {
   member: Member;
   onClose: () => void;
-  onPaymentSuccess: (memberId: string, amountPaid: number, method: 'Efectivo' | 'Tarjeta' | 'Transferencia') => Promise<void> | void;
+  onPaymentSuccess: (
+    memberId: string,
+    amountPaidUSD: number,
+    method: PaymentMethod,
+    currency?: Currency,
+    amountOriginal?: number,
+    exchangeRate?: number,
+    daysExtension?: number
+  ) => Promise<void> | void;
 }
 
 export const PaymentModal: React.FC<PaymentModalProps> = ({
@@ -14,28 +23,63 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   onClose,
   onPaymentSuccess,
 }) => {
-  const [method, setMethod] = useState<'Efectivo' | 'Tarjeta' | 'Transferencia'>('Efectivo');
-  const [amount, setAmount] = useState<string>(member.debtAmount.toString());
+  const [rates, setRates] = useState<ExchangeRates>(getSavedExchangeRates());
+  const [currency, setCurrency] = useState<Currency>('USD');
+  const [method, setMethod] = useState<PaymentMethod>('Efectivo');
+  const [renewalDays, setRenewalDays] = useState<number>(30);
+
+  // Valor base en USD (default a la deuda o $30 si no debe nada)
+  const defaultUSD = member.debtAmount > 0 ? member.debtAmount : 30;
+  const [amountUSDInput, setAmountUSDInput] = useState<string>(defaultUSD.toString());
+  const [originalAmountInput, setOriginalAmountInput] = useState<string>('');
+
   const [processing, setProcessing] = useState<boolean>(false);
+
+  // Al cambiar moneda o USD input, sincronizar el valor original
+  useEffect(() => {
+    const usd = parseFloat(amountUSDInput) || 0;
+    const converted = convertFromUSD(usd, currency, rates);
+    if (currency === 'USD') {
+      setOriginalAmountInput(usd.toString());
+    } else if (currency === 'VES') {
+      setOriginalAmountInput(converted.toFixed(2));
+    } else if (currency === 'COP') {
+      setOriginalAmountInput(Math.round(converted).toString());
+    }
+  }, [currency, amountUSDInput, rates]);
+
+  // Al editar el monto en la moneda seleccionada, recalcular USD
+  const handleOriginalAmountChange = (val: string) => {
+    setOriginalAmountInput(val);
+    const orig = parseFloat(val) || 0;
+    const usd = convertToUSD(orig, currency, rates);
+    setAmountUSDInput(usd.toFixed(2));
+  };
+
+  const parsedUSD = parseFloat(amountUSDInput) || 0;
+  const parsedOriginal = parseFloat(originalAmountInput) || 0;
+  const currentRate = currency === 'VES' ? rates.VES : currency === 'COP' ? rates.COP : 1;
+  const nextExpDate = calculateNewExpirationDate(member.expirationDate, renewalDays);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const paid = parseFloat(amount);
-    // Guard: prevent negative, zero, or non-numeric payments
-    if (isNaN(paid) || paid <= 0) return;
-    // Guard: prevent paying more than owed (optional soft warning)
-    if (paid > member.debtAmount * 2 && member.debtAmount > 0) {
-      const ok = window.confirm(`¿Confirmar pago de $${paid.toFixed(2)}? Supera el doble de la deuda actual.`);
-      if (!ok) return;
-    }
+    if (parsedUSD <= 0) return;
 
     setProcessing(true);
     try {
-      await onPaymentSuccess(member.id, paid, method);
-      confetti({ particleCount: 50, spread: 70, origin: { y: 0.6 } });
+      await onPaymentSuccess(
+        member.id,
+        parsedUSD,
+        method,
+        currency,
+        parsedOriginal,
+        currentRate,
+        renewalDays
+      );
+      confetti({ particleCount: 80, spread: 80, origin: { y: 0.6 } });
       onClose();
     } catch (err) {
-      console.error('Error procesando pago:', err);
+      console.error('Error procesando pago multi-moneda:', err);
       alert('Ocurrió un error al registrar el cobro. Verifica la conexión a Supabase.');
     } finally {
       setProcessing(false);
@@ -43,54 +87,126 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in duration-200">
-        <div className="flex items-center justify-between border-b border-slate-800 pb-4">
-          <div className="flex items-center gap-2">
-            <div className="p-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400">
-              <DollarSign className="w-5 h-5" />
+    <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <div className="bg-white border-4 border-slate-300 rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl space-y-6 animate-in fade-in zoom-in duration-200">
+        
+        {/* Header Claro */}
+        <div className="flex items-center justify-between border-b-2 border-slate-200 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="p-3 bg-emerald-600 text-white border-2 border-emerald-500 rounded-2xl shadow-lg shadow-emerald-600/30">
+              <Coins className="w-7 h-7 stroke-[2.5]" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-slate-100">Registrar Cobro de Cuota / Deuda</h3>
-              <p className="text-xs text-slate-400">Socio: {member.name} {member.lastName}</p>
+              <h3 className="text-xl font-black text-slate-900 tracking-tight">Registrar Cobro Multi-Moneda</h3>
+              <p className="text-xs font-bold text-slate-600">Socio: {member.name} {member.lastName}</p>
             </div>
           </div>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-800 font-black text-2xl">✕</button>
         </div>
 
-        <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 flex items-center justify-between">
+        {/* Tarjeta de Estado del Cliente */}
+        <div className="bg-slate-100 border-2 border-slate-300 rounded-2xl p-4 flex items-center justify-between shadow-inner">
           <div>
-            <span className="text-xs text-slate-400 block">Deuda Pendiente Actual:</span>
-            <span className="text-xl font-extrabold text-rose-400">${member.debtAmount.toFixed(2)}</span>
+            <span className="text-xs font-bold text-slate-600 block uppercase tracking-wider">Deuda Pendiente:</span>
+            <span className="text-2xl font-black text-rose-600">${member.debtAmount.toFixed(2)} USD</span>
+            {member.debtAmount > 0 && (
+              <span className="block text-xs font-extrabold text-slate-700 mt-0.5">
+                ({formatCurrency(member.debtAmount, 'VES', rates)} / {formatCurrency(member.debtAmount, 'COP', rates)})
+              </span>
+            )}
           </div>
-          <img src={member.avatarUrl} alt="" className="w-12 h-12 rounded-full object-cover border border-slate-700" />
+          <img src={member.avatarUrl} alt="" className="w-14 h-14 rounded-2xl object-cover border-2 border-slate-300 shadow" />
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
+          {/* Selector de Moneda de Pago */}
           <div>
-            <label className="block text-xs font-semibold text-slate-400 mb-1.5">Monto a Cobrar ($):</label>
-            <input
-              type="number"
-              step="0.01"
-              min="0.01"
-              required
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm font-bold text-emerald-400 focus:outline-none focus:border-emerald-500"
-            />
+            <label className="block text-xs font-black text-slate-900 mb-2 uppercase tracking-wider">
+              Seleccionar Moneda de Pago:
+            </label>
+            <div className="grid grid-cols-3 gap-2.5">
+              {(['USD', 'VES', 'COP'] as const).map((curr) => (
+                <button
+                  type="button"
+                  key={curr}
+                  onClick={() => setCurrency(curr)}
+                  className={`py-3 rounded-2xl text-xs sm:text-sm font-black border-2 transition-all flex flex-col items-center justify-center gap-0.5 shadow-sm ${
+                    currency === curr
+                      ? 'bg-emerald-600 text-white border-emerald-500 shadow-md scale-[1.02]'
+                      : 'bg-slate-100 border-slate-300 text-slate-800 hover:bg-slate-200'
+                  }`}
+                >
+                  <span>{curr === 'USD' ? '💵 USD ($)' : curr === 'VES' ? '🇻🇪 Bolívares (Bs)' : '🇨🇴 Pesos (COP)'}</span>
+                </button>
+              ))}
+            </div>
           </div>
 
+          {/* Campos de Monto y Conversión en Tiempo Real */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-black text-slate-900 mb-1">
+                Monto en {currency}:
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0.01"
+                required
+                value={originalAmountInput}
+                onChange={(e) => handleOriginalAmountChange(e.target.value)}
+                className="w-full bg-slate-50 border-2 border-slate-300 focus:border-emerald-600 rounded-2xl px-4 py-3 text-base font-black text-slate-900 focus:outline-none font-mono"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-black text-slate-900 mb-1">
+                Equivalente en USD ($):
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0.01"
+                required
+                value={amountUSDInput}
+                onChange={(e) => {
+                  setAmountUSDInput(e.target.value);
+                  const usd = parseFloat(e.target.value) || 0;
+                  setOriginalAmountInput(convertFromUSD(usd, currency, rates).toFixed(currency === 'COP' ? 0 : 2));
+                }}
+                className="w-full bg-emerald-50 border-2 border-emerald-400 rounded-2xl px-4 py-3 text-base font-black text-emerald-800 focus:outline-none font-mono"
+              />
+            </div>
+          </div>
+
+          {/* Tasa de Cambio Utilizada */}
+          {currency !== 'USD' && (
+            <div className="bg-slate-100 p-3 rounded-xl border border-slate-300 flex items-center justify-between text-xs font-bold text-slate-700">
+              <span className="flex items-center gap-1.5">
+                <ArrowRightLeft className="w-4 h-4 text-emerald-600" />
+                Tasa Aplicada (1 USD):
+              </span>
+              <span className="font-mono font-black text-slate-900">
+                {currency === 'VES' ? `${rates.VES} Bs.` : `${rates.COP.toLocaleString()} COP`}
+              </span>
+            </div>
+          )}
+
+          {/* Método de Pago */}
           <div>
-            <label className="block text-xs font-semibold text-slate-400 mb-1.5">Método de Pago:</label>
-            <div className="grid grid-cols-3 gap-2">
-              {(['Efectivo', 'Tarjeta', 'Transferencia'] as const).map((m) => (
+            <label className="block text-xs font-black text-slate-900 mb-1.5 uppercase tracking-wider">
+              Método de Pago:
+            </label>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {(['Efectivo', 'Pago Móvil', 'Transferencia', 'Tarjeta'] as const).map((m) => (
                 <button
                   type="button"
                   key={m}
-                  onClick={() => setMethod(m)}
-                  className={`py-2 rounded-xl text-xs font-semibold border transition-all ${
+                  onClick={() => setMethod(m as PaymentMethod)}
+                  className={`py-2.5 rounded-xl text-xs font-black border-2 transition-all ${
                     method === m
-                      ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300'
-                      : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-slate-200'
+                      ? 'bg-slate-900 text-white border-slate-900 shadow'
+                      : 'bg-slate-100 border-slate-300 text-slate-700 hover:bg-slate-200'
                   }`}
                 >
                   {m}
@@ -99,26 +215,50 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
             </div>
           </div>
 
-          <div className="bg-emerald-950/30 border border-emerald-500/20 rounded-xl p-3 text-xs text-emerald-300 flex items-start gap-2">
-            <Sparkles className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
-            <p>
-              Al completar el cobro atómico, la cuenta se marcará <strong>CUOTA AL DÍA</strong> y se renovará la validez del pase QR automáticamente por 30 días.
+          {/* Duración de Renovación de Membresía */}
+          <div>
+            <label className="block text-xs font-black text-slate-900 mb-1.5 uppercase tracking-wider flex items-center gap-1.5">
+              <Calendar className="w-4 h-4 text-emerald-600" /> Tiempo de Renovación:
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { days: 15, label: '15 Días' },
+                { days: 30, label: '1 Mes (30d)' },
+                { days: 90, label: '3 Meses (90d)' },
+              ].map((opt) => (
+                <button
+                  type="button"
+                  key={opt.days}
+                  onClick={() => setRenewalDays(opt.days)}
+                  className={`py-2 rounded-xl text-xs font-black border-2 transition-all ${
+                    renewalDays === opt.days
+                      ? 'bg-emerald-600 text-white border-emerald-500 shadow'
+                      : 'bg-slate-100 border-slate-300 text-slate-700 hover:bg-slate-200'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs font-bold text-emerald-700 mt-2 text-center">
+              Nueva Fecha de Vencimiento: <strong className="font-mono text-slate-900 text-sm">{nextExpDate}</strong>
             </p>
           </div>
 
-          <div className="pt-2 flex gap-2 justify-end">
+          {/* Footer de Acciones */}
+          <div className="pt-3 flex gap-3">
             <button
               type="button"
               onClick={onClose}
               disabled={processing}
-              className="px-4 py-2.5 rounded-xl text-xs text-slate-400 hover:text-white"
+              className="flex-1 bg-slate-100 border-2 border-slate-300 text-slate-800 font-black py-3 rounded-2xl text-xs sm:text-sm"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={processing}
-              className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-slate-950 font-bold px-5 py-2.5 rounded-xl text-xs flex items-center gap-2 shadow-lg shadow-emerald-600/20 transition-all"
+              className="flex-1 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-black py-3 rounded-2xl text-xs sm:text-sm shadow-xl border-2 border-emerald-500 flex items-center justify-center gap-2"
             >
               {processing ? (
                 <>
@@ -126,7 +266,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                 </>
               ) : (
                 <>
-                  <CheckCircle2 className="w-4 h-4" /> Confirmar Cobro & Habilitar QR
+                  <CheckCircle2 className="w-4 h-4 stroke-[3]" /> Registrar y Habilitar QR
                 </>
               )}
             </button>
