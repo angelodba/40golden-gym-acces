@@ -10,6 +10,23 @@ interface AccessLogsProps {
 
 export const AccessLogs: React.FC<AccessLogsProps> = ({ logs, onClearLogs }) => {
   const [clearing, setClearing] = useState(false);
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+
+  const filteredLogs = logs.filter((log) => {
+    if (!startDate && !endDate) return true;
+    // log.timestamp viene formateado como fecha local (o string ISO)
+    const logDate = new Date(log.timestamp);
+    if (startDate) {
+      const start = new Date(startDate + 'T00:00:00');
+      if (logDate < start) return false;
+    }
+    if (endDate) {
+      const end = new Date(endDate + 'T23:59:59');
+      if (logDate > end) return false;
+    }
+    return true;
+  });
 
   const handleClearHistory = async () => {
     if (!onClearLogs) return;
@@ -48,7 +65,7 @@ export const AccessLogs: React.FC<AccessLogsProps> = ({ logs, onClearLogs }) => 
 
         <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
           <span className="text-xs font-mono font-black text-slate-900 bg-slate-100 px-3.5 py-2 rounded-xl border border-slate-300 shadow-sm">
-            Total Registros: {logs.length}
+            Total Registros: {filteredLogs.length}
           </span>
           {onClearLogs && (
             <button
@@ -58,6 +75,42 @@ export const AccessLogs: React.FC<AccessLogsProps> = ({ logs, onClearLogs }) => 
             >
               <Trash2 className="w-4 h-4 stroke-[2.5]" />
               {clearing ? 'Purgando...' : 'Purga Manual'}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Filtros de Rango de Fechas */}
+      <div className="bg-white border-2 border-slate-200 rounded-2xl p-4 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="flex items-center gap-2 text-xs font-black text-slate-700">
+          <Calendar className="w-4 h-4 text-emerald-600" />
+          <span>Filtrar por Rango de Fechas:</span>
+        </div>
+        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-slate-500">Desde:</span>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="bg-slate-50 border-2 border-slate-200 rounded-xl px-3 py-1.5 text-xs font-black text-slate-900 font-mono focus:outline-none focus:border-emerald-500"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-slate-500">Hasta:</span>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="bg-slate-50 border-2 border-slate-200 rounded-xl px-3 py-1.5 text-xs font-black text-slate-900 font-mono focus:outline-none focus:border-emerald-500"
+            />
+          </div>
+          {(startDate || endDate) && (
+            <button
+              onClick={() => { setStartDate(''); setEndDate(''); }}
+              className="text-xs font-bold text-rose-600 hover:text-rose-800 underline"
+            >
+              Limpiar Fechas
             </button>
           )}
         </div>
@@ -76,15 +129,15 @@ export const AccessLogs: React.FC<AccessLogsProps> = ({ logs, onClearLogs }) => 
               </tr>
             </thead>
             <tbody className="divide-y-2 divide-slate-100 text-sm font-bold text-slate-800">
-              {logs.length === 0 ? (
+              {filteredLogs.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="py-16 text-center text-slate-500 font-bold">
                     <Calendar className="w-10 h-10 text-slate-400 mx-auto mb-3" />
-                    No hay registros de acceso acumulados.
+                    No hay registros de acceso acumulados para este rango de fechas.
                   </td>
                 </tr>
               ) : (
-                logs.map((log) => {
+                filteredLogs.map((log) => {
                   const isGranted = log.status === 'GRANTED';
                   const avatar = getMemberAvatarUrl(log.memberName, '', log.avatarUrl);
 

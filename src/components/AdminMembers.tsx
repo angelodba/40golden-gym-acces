@@ -5,6 +5,7 @@ import { exportMembersToExcel } from '../utils/excelUtils';
 import { getMemberAvatarUrl } from '../utils/avatarUtils';
 import { getSavedExchangeRates, saveExchangeRates, formatCurrency, getDaysRemaining } from '../utils/currencyUtils';
 import { ExcelImportModal } from './ExcelImportModal';
+import { FreezeMembershipModal } from './FreezeMembershipModal';
 import { DebtManagementPanel } from './members/DebtManagementPanel';
 import { Users, UserPlus, Search, DollarSign, QrCode, AlertTriangle, CheckCircle, ShieldCheck, FileSpreadsheet, Download, Calendar, Coins, ArrowRightLeft, Clock, TrendingDown } from 'lucide-react';
 import { QRCodeCanvas } from 'qrcode.react';
@@ -40,6 +41,7 @@ export const AdminMembers: React.FC<AdminMembersProps> = ({
   const [showAddModal, setShowAddModal] = useState(false);
   const [showExcelModal, setShowExcelModal] = useState(false);
   const [viewQrMember, setViewQrMember] = useState<Member | null>(null);
+  const [freezeMember, setFreezeMember] = useState<Member | null>(null);
 
   // Configuración de Tasas de Cambio Multi-Moneda (USD / VES / COP)
   const [rates, setRates] = useState<ExchangeRates>(getSavedExchangeRates());
@@ -429,6 +431,13 @@ export const AdminMembers: React.FC<AdminMembersProps> = ({
                       <td className="py-4 px-5 text-right">
                         <div className="flex items-center justify-end gap-2">
                           <button
+                            onClick={() => setFreezeMember(member)}
+                            className="p-2 bg-sky-50 hover:bg-sky-100 border-2 border-sky-300 text-sky-700 rounded-xl transition-all shadow-sm"
+                            title="Congelar / Pausar Membresía"
+                          >
+                            <Clock className="w-4 h-4 stroke-[2.5]" />
+                          </button>
+                          <button
                             onClick={() => setViewQrMember(member)}
                             className="p-2.5 bg-slate-100 hover:bg-slate-200 border-2 border-slate-300 text-slate-900 rounded-xl transition-all shadow-sm"
                             title="Ver pase QR"
@@ -605,6 +614,18 @@ export const AdminMembers: React.FC<AdminMembersProps> = ({
           onImportSuccess={async (batch: Member[]) => {
             await onAddMembersBatch(batch);
             setShowExcelModal(false);
+          }}
+        />
+      )}
+
+      {/* Modal Congelar / Pausar Membresía */}
+      {freezeMember && (
+        <FreezeMembershipModal
+          member={freezeMember}
+          onClose={() => setFreezeMember(null)}
+          onSuccess={() => {
+            setFreezeMember(null);
+            window.location.reload();
           }}
         />
       )}
