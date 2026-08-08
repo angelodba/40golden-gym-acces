@@ -160,12 +160,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           password: pass,
         });
 
-        if (error) {
-          handleFailedAttempt();
-          return { success: false, error: 'Credenciales inválidas en Supabase: ' + error.message };
-        }
-
-        if (data.user) {
+        if (!error && data.user) {
           const authUser: AuthUser = {
             id: data.user.id,
             email: data.user.email || cleanEmail,
@@ -173,6 +168,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             role: (data.user.user_metadata?.role as UserRole) || 'admin',
           };
           setUser(authUser);
+          sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authUser));
           setFailedLoginAttempts(0);
           return { success: true };
         }
