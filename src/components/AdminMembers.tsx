@@ -25,6 +25,7 @@ interface AdminMembersProps {
     exchangeRate?: number,
     daysExtension?: number
   ) => Promise<void> | void;
+  onUpdateMemberDebt?: (memberId: string, newDebt: number) => void;
 }
 
 type AdminTab = 'members' | 'collections';
@@ -35,6 +36,7 @@ export const AdminMembers: React.FC<AdminMembersProps> = ({
   onAddMembersBatch,
   onOpenPaymentModal,
   onPaymentSuccess,
+  onUpdateMemberDebt,
 }) => {
   const [activeTab, setActiveTab] = useState<AdminTab>('members');
   const [searchTerm, setSearchTerm] = useState('');
@@ -255,7 +257,7 @@ export const AdminMembers: React.FC<AdminMembersProps> = ({
 
       {/* ── Pestaña: Gestión de Cobranzas ───────────────────────────────── */}
       {activeTab === 'collections' && onPaymentSuccess && (
-        <DebtManagementPanel members={members} onPaymentSuccess={onPaymentSuccess} />
+        <DebtManagementPanel members={members} onPaymentSuccess={onPaymentSuccess} onUpdateMemberDebt={onUpdateMemberDebt} />
       )}
       {activeTab === 'collections' && !onPaymentSuccess && (
         <div className="bg-amber-50 border-2 border-amber-200 rounded-2xl p-6 text-center">

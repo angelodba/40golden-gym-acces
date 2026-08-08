@@ -39,6 +39,7 @@ interface DebtManagementPanelProps {
     exchangeRate?: number,
     daysExtension?: number
   ) => Promise<void> | void;
+  onUpdateMemberDebt?: (memberId: string, newDebt: number) => void;
 }
 
 // ── Modal de Ajuste / Condonación de Deuda ────────────────────────────────────
@@ -150,7 +151,7 @@ const DebtAdjustModal: React.FC<DebtAdjustModalProps> = ({ member, onClose, onAd
 };
 
 // ── Componente Principal ───────────────────────────────────────────────────────
-export const DebtManagementPanel: React.FC<DebtManagementPanelProps> = ({ members, onPaymentSuccess }) => {
+export const DebtManagementPanel: React.FC<DebtManagementPanelProps> = ({ members, onPaymentSuccess, onUpdateMemberDebt }) => {
   const rates: ExchangeRates = getSavedExchangeRates();
   const [filter, setFilter] = useState<DebtFilter>('ALL');
   const [searchTerm, setSearchTerm] = useState('');
@@ -485,7 +486,7 @@ export const DebtManagementPanel: React.FC<DebtManagementPanelProps> = ({ member
           member={adjustMember}
           onClose={() => setAdjustMember(null)}
           onAdjusted={(memberId, newDebt) => {
-            // El estado se actualizará vía realtime subscription de Supabase
+            onUpdateMemberDebt?.(memberId, newDebt);
             setAdjustMember(null);
           }}
         />

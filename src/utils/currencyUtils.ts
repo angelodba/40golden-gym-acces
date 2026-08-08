@@ -63,24 +63,47 @@ export function formatCurrency(amountUSD: number, currency: Currency = 'USD', ra
 }
 
 /**
+ * Parsea una cadena de fecha YYYY-MM-DD o ISO a un objeto Date seguro en la zona horaria local.
+ * Si es una fecha de vencimiento (YYYY-MM-DD), ajusta la hora a las 23:59:59 para cubrir todo el día.
+ */
+export function parseLocalDate(dateStr: string | undefined | null, endOfDay: boolean = true): Date {
+  if (!dateStr) return new Date();
+  const clean = dateStr.trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(clean)) {
+    const [year, month, day] = clean.split('-').map(Number);
+    return endOfDay
+      ? new Date(year, month - 1, day, 23, 59, 59, 999)
+      : new Date(year, month - 1, day, 0, 0, 0, 0);
+  }
+  const d = new Date(dateStr);
+  return isNaN(d.getTime()) ? new Date() : d;
+}
+
+/**
  * Calcular la nueva fecha de vencimiento sumando días a la fecha actual o fecha previa.
  */
 export function calculateNewExpirationDate(currentExpirationDate: string, daysToAdd: number = 30): string {
   const now = new Date();
-  const exp = new Date(currentExpirationDate);
+  const exp = parseLocalDate(currentExpirationDate, true);
 
   // Si la fecha previa ya venció, renovar a partir de HOY. Si sigue vigente, extender desde la fecha previa.
   const baseDate = exp > now ? exp : now;
   const result = new Date(baseDate.getTime() + daysToAdd * 24 * 60 * 60 * 1000);
-  return result.toISOString().split('T')[0];
+  
+  const year = result.getFullYear();
+  const month = String(result.getMonth() + 1).padStart(2, '0');
+  const day = String(result.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 /**
- * Obtener los días restantes antes del vencimiento.
+ * Obtener los días restantes antes del vencimiento (considerando hora local).
  */
 export function getDaysRemaining(expirationDate: string): number {
-  const exp = new Date(expirationDate);
+  if (!expirationDate) return 0;
+  const exp = parseLocalDate(expirationDate, true);
   const now = new Date();
   const diffTime = exp.getTime() - now.getTime();
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 }
+

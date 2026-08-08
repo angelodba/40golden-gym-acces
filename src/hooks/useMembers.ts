@@ -147,11 +147,35 @@ export function useMembers() {
     []
   );
 
+  const updateMemberDebt = useCallback((memberId: string, newDebt: number) => {
+    setMembers((prev) =>
+      prev.map((m) => {
+        if (m.id !== memberId) return m;
+        return {
+          ...m,
+          debtAmount: newDebt,
+          status: newDebt > 0 ? 'DEBTOR' : m.status === 'DEBTOR' ? 'ACTIVE' : m.status,
+        };
+      })
+    );
+  }, []);
+
+  const refreshMembers = useCallback(async () => {
+    try {
+      const loaded = await getMembers();
+      setMembers(loaded);
+    } catch (err) {
+      console.warn('[useMembers] Error al refrescar socios:', err);
+    }
+  }, []);
+
   return {
     members,
     loading,
     addMember,
     addMembersBatch,
     handlePaymentSuccess,
+    updateMemberDebt,
+    refreshMembers,
   };
 }

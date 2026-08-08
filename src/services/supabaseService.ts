@@ -155,6 +155,7 @@ export async function addAccessLogToStorage(log: AccessLog): Promise<void> {
  * Registrar un nuevo socio individual.
  */
 export async function addMemberToStorage(newMember: Member): Promise<Member> {
+  let savedMember = newMember;
   if (isSupabaseConfigured && supabase) {
     try {
       const record: Record<string, unknown> = {
@@ -184,14 +185,23 @@ export async function addMemberToStorage(newMember: Member): Promise<Member> {
       if (error) {
         console.error('[supabaseService] addMemberToStorage error:', error.message, error.details);
       } else if (data) {
-        return mapRowToMember(data);
+        savedMember = mapRowToMember(data);
       }
     } catch (err) {
       console.error('[supabaseService] addMemberToStorage excepción:', err);
     }
   }
 
-  return newMember;
+  try {
+    const saved = localStorage.getItem(LOCAL_STORAGE_MEMBERS_KEY);
+    const existing: Member[] = saved ? JSON.parse(saved) : [];
+    const updated = [savedMember, ...existing.filter((m) => m.id !== savedMember.id && m.dni !== savedMember.dni)];
+    localStorage.setItem(LOCAL_STORAGE_MEMBERS_KEY, JSON.stringify(updated));
+  } catch (e) {
+    console.warn('[supabaseService] Error sincronizando LocalStorage:', e);
+  }
+
+  return savedMember;
 }
 
 /**
