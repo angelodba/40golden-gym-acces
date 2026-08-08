@@ -45,10 +45,26 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccessLogin }) => {
     }
   };
 
-  const handleFillDemoAdmin = () => {
-    setEmail('admin@40goldengym.com');
-    setPassword('GymSecure2026!');
+  const handleFillDemoAdmin = async () => {
+    const demoEmail = 'admin@40goldengym.com';
+    const demoPass = 'GymSecure2026!';
+    setEmail(demoEmail);
+    setPassword(demoPass);
     setErrorMsg(null);
+    setLoading(true);
+
+    try {
+      const res = await login(demoEmail, demoPass);
+      setLoading(false);
+      if (!res.success) {
+        setErrorMsg(res.error || 'Error al iniciar sesión con credenciales demo.');
+      } else if (onSuccessLogin) {
+        onSuccessLogin();
+      }
+    } catch (err: any) {
+      setLoading(false);
+      setErrorMsg('Error en el acceso demo: ' + err.message);
+    }
   };
 
   return (

@@ -56,11 +56,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [lockoutTimeRemaining, setLockoutTimeRemaining] = useState<number>(0);
   const [activeOtpSession, setActiveOtpSession] = useState<OtpRecoverySession | null>(null);
 
-  // Inicializar credenciales de bóveda local si no existen
+  // Inicializar o actualizar credenciales de bóveda local para el administrador principal
   const ensureInitialVaultUser = async () => {
-    const existing = localStorage.getItem(LOCAL_USERS_KEY);
-    if (!existing) {
-      // Hashing inicial PBKDF2 para la cuenta por defecto admin@40goldengym.com / GymSecure2026!
+    try {
       const defaultPassword = 'GymSecure2026!';
       const { hash, salt } = await hashPassword(defaultPassword, INITIAL_ADMIN_SALT);
       const defaultUser: StoredLocalUser = {
@@ -71,7 +69,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         passwordHash: hash,
         salt: salt,
       };
-      localStorage.setItem(LOCAL_USERS_KEY, JSON.stringify([defaultUser]));
+
+      const existingRaw = localStorage.getItem(LOCAL_USERS_KEY);
+      let localUsers: StoredLocalUser[] = [];
+      if (existingRaw) {
+        try {
+          localUsers = JSON.parse(existingRaw);
+        } catch {
+          localUsers = [];
+        }
+      }
+
+      const adminIdx = localUsers.findIndex((u) => u.email.toLowerCase() === 'admin@40goldengym.com');
+      if (adminIdx === -1) {
+        localUsers.push(defaultUser);
+      } else {
+        localUsers[adminIdx] = defaultUser;
+      }
+
+      localStorage.setItem(LOCAL_USERS_KEY, JSON.stringify(localUsers));
+    } catch (err) {
+      console.error('Error al inicializar usuario admin en bóveda:', err);
     }
   };
 
