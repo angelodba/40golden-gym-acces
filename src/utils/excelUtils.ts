@@ -1,6 +1,7 @@
 import * as XLSX from 'xlsx';
 import { Member } from '../types';
 import { generateSecureQrToken } from './crypto';
+import { generateUUID } from '../lib/crypto';
 
 export interface ParsedClientRow {
   id?: string;
@@ -135,7 +136,7 @@ async function processChunk(
 
     const isValid = Boolean(name.trim());
     const error = !isValid ? 'Falta el nombre del cliente' : undefined;
-    const id = crypto.randomUUID();
+    const id = generateUUID();
 
     return { id, name: name.trim(), lastName: lastName.trim(), dni: dni.trim(), phone, email, planName, debtAmount, isValid, error };
   });

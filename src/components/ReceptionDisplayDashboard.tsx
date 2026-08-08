@@ -4,6 +4,7 @@ import { verifyAccess } from '../services/supabaseService';
 import { subscribeToScanEvents, broadcastScanEvent } from '../utils/broadcast';
 import { playAccessSound, primeAudioContext } from '../utils/audio';
 import { formatDateLatam } from '../utils/dateUtils';
+import { generateUUID } from '../lib/crypto';
 import {
   Monitor, CheckCircle2, XCircle, AlertTriangle, ShieldCheck,
   Lock, Unlock, DollarSign, History, Sparkles, Clock, User, Zap, Search
@@ -92,7 +93,7 @@ export const ReceptionDisplayDashboard: React.FC<ReceptionDisplayDashboardProps>
 
     // 3. Crear nuevo registro de acceso
     const newLog: AccessLog = {
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       memberId: result.member?.id || 'UNKNOWN',
       memberName: result.member ? `${result.member.name} ${result.member.lastName}` : 'Desconocido / Inválido',
       timestamp: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),

@@ -1,10 +1,11 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
+import { generateUUID } from '../lib/crypto';
 
 const LOCAL_CHANNEL_NAME = 'gym_access_local_channel';
 const SUPABASE_CHANNEL_NAME = 'gym-access-events';
 
 // Client ID único para evitar bucles de retroalimentación circular en la misma sesión
-export const CLIENT_ID = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2);
+export const CLIENT_ID = generateUUID();
 
 export interface ScanPayload {
   token: string;

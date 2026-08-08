@@ -5,6 +5,7 @@ import { Member, AccessLog } from '../types';
 import { verifyAccess } from '../services/supabaseService';
 import { broadcastScanEvent } from '../utils/broadcast';
 import { playAccessSound, primeAudioContext } from '../utils/audio';
+import { generateUUID } from '../lib/crypto';
 
 const SCAN_COOLDOWN_MS = 2500;
 
@@ -92,7 +93,7 @@ export const MobileScannerTerminal: React.FC<MobileScannerTerminalProps> = ({
     // 4. Registrar evento en la lista de logs
     if (onLogAccess) {
       onLogAccess({
-        id: crypto.randomUUID(),
+        id: generateUUID(),
         memberId: result.member?.id || 'UNKNOWN',
         memberName: result.member ? `${result.member.name} ${result.member.lastName}` : 'Desconocido',
         timestamp: new Date().toISOString(),

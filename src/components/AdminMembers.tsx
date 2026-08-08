@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Member, ExchangeRates, Currency, PaymentMethod } from '../types';
 import { generateSecureQrToken } from '../utils/crypto';
+import { generateUUID } from '../lib/crypto';
 import { exportMembersToExcel } from '../utils/excelUtils';
 import { getMemberAvatarUrl } from '../utils/avatarUtils';
 import { getSavedExchangeRates, saveExchangeRates, formatCurrency, getDaysRemaining } from '../utils/currencyUtils';
@@ -91,7 +92,7 @@ export const AdminMembers: React.FC<AdminMembersProps> = ({
     if (!newName.trim() || !newLastName.trim() || !newDni.trim()) return;
 
     const debt = Math.max(0, parseFloat(initialDebt) || 0);
-    const memberId = crypto.randomUUID();
+    const memberId = generateUUID();
     const token = await generateSecureQrToken(memberId);
 
     const name = newName.trim();

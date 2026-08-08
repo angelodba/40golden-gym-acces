@@ -3,6 +3,7 @@ import { Member } from '../types';
 import { parseExcelFile, downloadSampleExcel, ImportPreviewItem } from '../utils/excelUtils';
 import { FileSpreadsheet, Upload, Download, CheckCircle, AlertTriangle, X, RefreshCw, Users, ShieldCheck } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { generateUUID } from '../lib/crypto';
 
 interface ExcelImportModalProps {
   existingMembers: Member[];
@@ -78,7 +79,7 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({
         .split('T')[0];
 
       const newMembers: Member[] = validItems.map((item, index) => ({
-        id: item.id || crypto.randomUUID(),
+        id: item.id || generateUUID(),
         qrToken: item.qrToken,
         name: item.name,
         lastName: item.lastName,
